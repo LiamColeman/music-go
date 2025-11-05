@@ -140,9 +140,13 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 	defer conn.Close(context.Background())
 
 	var album AlbumWithSongs
-	query := `SELECT id, name, release_year FROM album WHERE id = $1`
 
-	err = conn.QueryRow(c, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear)
+	query := `SELECT album.id, album.name, album.release_year, artist.name as artist 
+		FROM album 
+		JOIN artist ON album.artist_id = artist.id 
+		WHERE album.id = $1`
+
+	err = conn.QueryRow(c, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear, &album.ArtistName)
 	if err != nil {
 		return nil, err
 	}
