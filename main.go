@@ -203,6 +203,29 @@ func getSongs(c *gin.Context) ([]Song, error) {
 	return songs, nil
 }
 
+func getSong(c *gin.Context, id string) (*Song, error) {
+
+	query := `SELECT song.id, song.title, song.track_number, song.duration_seconds, album.name as album, artist.name as artist
+				FROM song
+				JOIN album ON song.album_id = album.id
+				JOIN artist ON album.artist_id = artist.id
+				WHERE song.id = $1`
+	rows, err := dbPool.Query(c, query, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var song Song
+
+	err = dbPool.QueryRow(c, query, id).Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds, &song.AlbumName, &song.ArtistName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &song, nil
+}
+
 func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
 
 	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE album_id = $1 ORDER BY track_number`
@@ -304,6 +327,18 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, songs)
+	})
+
+	router.GET("/songs/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		song, err := getSong(c, id)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, song)
 	})
 
 	router.Run(":9000")
