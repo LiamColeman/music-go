@@ -27,6 +27,18 @@ type ArtistWithAlbums struct {
 	Albums []Album
 }
 
+type Song struct {
+	ID              int    `json:"id"`
+	Title           string `json:"title"`
+	TrackNumber     int    `json:"track_number"`
+	DurationSeconds int    `json:"duration_seconds"`
+}
+
+type AlbumWithSongs struct {
+	Album
+	Songs []Song
+}
+
 func getArtists(c *gin.Context) ([]Artist, error) {
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -174,6 +186,39 @@ func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
 	return albums, nil
 }
 
+func getSongs(c *gin.Context) ([]Song, error) {
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close(context.Background())
+
+	query := `SELECT id, title, track_number, duration_seconds FROM song`
+	rows, err := conn.Query(c, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	songs := []Song{}
+
+	for rows.Next() {
+		var song Song
+		if err := rows.Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds); err != nil {
+			return nil, err
+		}
+
+		songs = append(songs, song)
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+	}
+
+	return songs, nil
+}
+
 func main() {
 
 	router := gin.Default()
@@ -229,6 +274,17 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, album)
+	})
+
+	router.GET("/songs", func(c *gin.Context) {
+		songs, err := getSongs(c)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, songs)
 	})
 
 	router.Run(":9000")
