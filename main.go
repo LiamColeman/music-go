@@ -2,12 +2,16 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var dbPool *pgxpool.Pool
 
 type Artist struct {
 	ID          int    `json:"id"`
@@ -42,14 +46,8 @@ type AlbumWithSongs struct {
 }
 
 func getArtists(c *gin.Context) ([]Artist, error) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(context.Background())
-
 	query := `SELECT id, name, description FROM artist`
-	rows, err := conn.Query(c, query)
+	rows, err := dbPool.Query(c, query)
 	if err != nil {
 		return nil, err
 	}
@@ -266,6 +264,13 @@ func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
 }
 
 func main() {
+
+	var err error
+	dbPool, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal("Unable to create connection pool:", err)
+	}
+	defer dbPool.Close()
 
 	router := gin.Default()
 
