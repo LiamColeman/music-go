@@ -29,6 +29,8 @@ type ArtistWithAlbums struct {
 
 type Song struct {
 	ID              int    `json:"id"`
+	ArtistName      string `json:"artist,omitempty"`
+	AlbumName       string `json:"album,omitempty"`
 	Title           string `json:"title"`
 	TrackNumber     int    `json:"track_number"`
 	DurationSeconds int    `json:"duration_seconds"`
@@ -200,7 +202,11 @@ func getSongs(c *gin.Context) ([]Song, error) {
 	}
 	defer conn.Close(context.Background())
 
-	query := `SELECT id, title, track_number, duration_seconds FROM song`
+	query := `SELECT song.id, song.title, song.track_number, song.duration_seconds, album.name as album, artist.name as artist
+				FROM song
+				JOIN album ON song.album_id = album.id
+				JOIN artist ON album.artist_id = artist.id
+				ORDER BY song.title`
 	rows, err := conn.Query(c, query)
 	if err != nil {
 		return nil, err
@@ -211,7 +217,7 @@ func getSongs(c *gin.Context) ([]Song, error) {
 
 	for rows.Next() {
 		var song Song
-		if err := rows.Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds); err != nil {
+		if err := rows.Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds, &song.AlbumName, &song.ArtistName); err != nil {
 			return nil, err
 		}
 
