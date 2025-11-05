@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -73,16 +72,10 @@ func getArtists(c *gin.Context) ([]Artist, error) {
 }
 
 func getArtist(c *gin.Context, id string) (*ArtistWithAlbums, error) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(context.Background())
-
 	var artist ArtistWithAlbums
 	query := `SELECT id, name, description FROM artist WHERE id = $1`
 
-	err = conn.QueryRow(c, query, id).Scan(&artist.ID, &artist.Name, &artist.Description)
+	err := dbPool.QueryRow(c, query, id).Scan(&artist.ID, &artist.Name, &artist.Description)
 	if err != nil {
 		return nil, err
 	}
@@ -97,17 +90,12 @@ func getArtist(c *gin.Context, id string) (*ArtistWithAlbums, error) {
 }
 
 func getAlbums(c *gin.Context) ([]Album, error) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(context.Background())
 
 	query := `SELECT album.id, album.name, album.release_year, artist.name as artist 
 			FROM album 
 			JOIN artist ON album.artist_id = artist.id 
 			ORDER BY artist.name, album.name`
-	rows, err := conn.Query(c, query)
+	rows, err := dbPool.Query(c, query)
 	if err != nil {
 		return nil, err
 	}
@@ -133,11 +121,6 @@ func getAlbums(c *gin.Context) ([]Album, error) {
 }
 
 func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(context.Background())
 
 	var album AlbumWithSongs
 
@@ -146,7 +129,7 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 		JOIN artist ON album.artist_id = artist.id 
 		WHERE album.id = $1`
 
-	err = conn.QueryRow(c, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear, &album.ArtistName)
+	err := dbPool.QueryRow(c, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear, &album.ArtistName)
 	if err != nil {
 		return nil, err
 	}
@@ -161,14 +144,9 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 }
 
 func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(context.Background())
 
 	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1 ORDER BY release_year DESC`
-	rows, err := conn.Query(c, query, artistID)
+	rows, err := dbPool.Query(c, query, artistID)
 	if err != nil {
 		return nil, err
 	}
@@ -194,18 +172,13 @@ func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
 }
 
 func getSongs(c *gin.Context) ([]Song, error) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(context.Background())
 
 	query := `SELECT song.id, song.title, song.track_number, song.duration_seconds, album.name as album, artist.name as artist
 				FROM song
 				JOIN album ON song.album_id = album.id
 				JOIN artist ON album.artist_id = artist.id
 				ORDER BY song.title`
-	rows, err := conn.Query(c, query)
+	rows, err := dbPool.Query(c, query)
 	if err != nil {
 		return nil, err
 	}
@@ -231,14 +204,9 @@ func getSongs(c *gin.Context) ([]Song, error) {
 }
 
 func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
-	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close(context.Background())
 
 	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE album_id = $1 ORDER BY track_number`
-	rows, err := conn.Query(c, query, albumID)
+	rows, err := dbPool.Query(c, query, albumID)
 	if err != nil {
 		return nil, err
 	}
