@@ -129,14 +129,14 @@ func getAlbums(c *gin.Context) ([]Album, error) {
 	return albums, nil
 }
 
-func getAlbum(c *gin.Context, id string) (*Album, error) {
+func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close(context.Background())
 
-	var album Album
+	var album AlbumWithSongs
 	query := `SELECT id, name, release_year FROM album WHERE id = $1`
 
 	err = conn.QueryRow(c, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear)
@@ -144,10 +144,10 @@ func getAlbum(c *gin.Context, id string) (*Album, error) {
 		return nil, err
 	}
 
-	// artist.Albums, err = getAlbumsForArtist(c, artist.ID)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	album.Songs, err = getSongsForAlbum(c, album.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	return &album, err
 
@@ -160,7 +160,7 @@ func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
 	}
 	defer conn.Close(context.Background())
 
-	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1`
+	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1 ORDER BY release_year DESC`
 	rows, err := conn.Query(c, query, artistID)
 	if err != nil {
 		return nil, err
@@ -195,6 +195,39 @@ func getSongs(c *gin.Context) ([]Song, error) {
 
 	query := `SELECT id, title, track_number, duration_seconds FROM song`
 	rows, err := conn.Query(c, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	songs := []Song{}
+
+	for rows.Next() {
+		var song Song
+		if err := rows.Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds); err != nil {
+			return nil, err
+		}
+
+		songs = append(songs, song)
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+	}
+
+	return songs, nil
+}
+
+func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close(context.Background())
+
+	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE album_id = $1 ORDER BY track_number`
+	rows, err := conn.Query(c, query, albumID)
 	if err != nil {
 		return nil, err
 	}
