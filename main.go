@@ -10,23 +10,13 @@ import (
 )
 
 // struct to represent artist
-type artist struct {
+type Artist struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
-// var artists = []artist{
-// 	{ID: "1", Name: "King Gizzard & the Lizard Wizard", Description: "Lizard Wizard or something idk."},
-// 	{ID: "2", Name: "Minus The Bear", Description: "Band that doesn't have a bear."},
-// 	{ID: "3", Name: "Kraftwerk", Description: "Idk"},
-// }
-
-// func getArtists2(c *gin.Context) {
-// 	c.IndentedJSON(http.StatusOK, artists)
-// }
-
-func getArtists(c *gin.Context) ([]artist, error) {
+func getArtists(c *gin.Context) ([]Artist, error) {
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return nil, err
@@ -40,15 +30,15 @@ func getArtists(c *gin.Context) ([]artist, error) {
 	}
 	defer rows.Close()
 
-	artists := []artist{}
+	artists := []Artist{}
 
 	for rows.Next() {
-		var art artist
-		if err := rows.Scan(&art.ID, &art.Name, &art.Description); err != nil {
+		var artist Artist
+		if err := rows.Scan(&artist.ID, &artist.Name, &artist.Description); err != nil {
 			return nil, err
 		}
 
-		artists = append(artists, art)
+		artists = append(artists, artist)
 
 		if err := rows.Err(); err != nil {
 			return nil, err
@@ -60,12 +50,6 @@ func getArtists(c *gin.Context) ([]artist, error) {
 }
 
 func main() {
-	// rows, _ := conn.Query(context.Background(), "SELECT id, name, description FROM artist", 5)
-	// if err != nil {
-	// 	fmt.Println("ERROR:", err)
-	// }
-
-	// fmt.Println(artists)
 
 	router := gin.Default()
 
