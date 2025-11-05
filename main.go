@@ -22,6 +22,11 @@ type Album struct {
 	ReleaseYear int    `json:"release_year"`
 }
 
+type ArtistWithAlbums struct {
+	Artist
+	Albums []Album
+}
+
 func getArtists(c *gin.Context) ([]Artist, error) {
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -55,20 +60,22 @@ func getArtists(c *gin.Context) ([]Artist, error) {
 	return artists, nil
 }
 
-func getArtist(c *gin.Context, id string) (*Artist, error) {
+func getArtist(c *gin.Context, id string) (*ArtistWithAlbums, error) {
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close(context.Background())
 
+	var artist ArtistWithAlbums
 	query := `SELECT id, name, description FROM artist WHERE id = $1`
-	rows, err := conn.Query(c, query, id)
+
+	err = conn.QueryRow(c, query, id).Scan(&artist.ID, &artist.Name, &artist.Description)
 	if err != nil {
 		return nil, err
 	}
 
-	artist, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Artist])
+	artist.Albums, err = getAlbumsForArtist(c, artist.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +93,39 @@ func getAlbums(c *gin.Context) ([]Album, error) {
 
 	query := `SELECT id, name, release_year FROM album`
 	rows, err := conn.Query(c, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	albums := []Album{}
+
+	for rows.Next() {
+		var album Album
+		if err := rows.Scan(&album.ID, &album.Name, &album.ReleaseYear); err != nil {
+			return nil, err
+		}
+
+		albums = append(albums, album)
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+	}
+
+	return albums, nil
+}
+
+func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close(context.Background())
+
+	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1`
+	rows, err := conn.Query(c, query, artistID)
 	if err != nil {
 		return nil, err
 	}
