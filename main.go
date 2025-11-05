@@ -117,6 +117,30 @@ func getAlbums(c *gin.Context) ([]Album, error) {
 	return albums, nil
 }
 
+func getAlbum(c *gin.Context, id string) (*Album, error) {
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close(context.Background())
+
+	var album Album
+	query := `SELECT id, name, release_year FROM album WHERE id = $1`
+
+	err = conn.QueryRow(c, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear)
+	if err != nil {
+		return nil, err
+	}
+
+	// artist.Albums, err = getAlbumsForArtist(c, artist.ID)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	return &album, err
+
+}
+
 func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -155,7 +179,7 @@ func main() {
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
-		// Return JSON Response
+
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
@@ -169,7 +193,6 @@ func main() {
 			return
 		}
 
-		// Return JSON Response
 		c.JSON(http.StatusOK, artists)
 	})
 
@@ -182,7 +205,6 @@ func main() {
 			return
 		}
 
-		// Return JSON Response
 		c.JSON(http.StatusOK, artist)
 	})
 
@@ -194,8 +216,19 @@ func main() {
 			return
 		}
 
-		// Return JSON Response
 		c.JSON(http.StatusOK, albums)
+	})
+
+	router.GET("/albums/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		album, err := getAlbum(c, id)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, album)
 	})
 
 	router.Run(":9000")
