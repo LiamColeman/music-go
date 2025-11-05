@@ -11,7 +11,7 @@ import (
 
 // struct to represent artist
 type Artist struct {
-	ID          string `json:"id"`
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
@@ -49,6 +49,28 @@ func getArtists(c *gin.Context) ([]Artist, error) {
 	return artists, nil
 }
 
+func getArtist(c *gin.Context, id string) (*Artist, error) {
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close(context.Background())
+
+	query := `SELECT id, name, description FROM artist WHERE id = $1`
+	rows, err := conn.Query(c, query, id)
+	if err != nil {
+		return nil, err
+	}
+
+	artist, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Artist])
+	if err != nil {
+		return nil, err
+	}
+
+	return &artist, err
+
+}
+
 func main() {
 
 	router := gin.Default()
@@ -70,6 +92,19 @@ func main() {
 
 		// Return JSON Response
 		c.JSON(http.StatusOK, artists)
+	})
+
+	router.GET("/artists/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		artist, err := getArtist(c, id)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Return JSON Response
+		c.JSON(http.StatusOK, artist)
 	})
 
 	router.Run(":9000")
