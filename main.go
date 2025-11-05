@@ -9,11 +9,17 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// struct to represent artist
 type Artist struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+}
+
+type Album struct {
+	ID int `json:"id"`
+	// ArtistID    int    `json:"artist_id"`
+	Name        string `json:"name"`
+	ReleaseYear int    `json:"release_year"`
 }
 
 func getArtists(c *gin.Context) ([]Artist, error) {
@@ -71,6 +77,39 @@ func getArtist(c *gin.Context, id string) (*Artist, error) {
 
 }
 
+func getAlbums(c *gin.Context) ([]Album, error) {
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close(context.Background())
+
+	query := `SELECT id, name, release_year FROM album`
+	rows, err := conn.Query(c, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	albums := []Album{}
+
+	for rows.Next() {
+		var album Album
+		if err := rows.Scan(&album.ID, &album.Name, &album.ReleaseYear); err != nil {
+			return nil, err
+		}
+
+		albums = append(albums, album)
+
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+
+	}
+
+	return albums, nil
+}
+
 func main() {
 
 	router := gin.Default()
@@ -105,6 +144,18 @@ func main() {
 
 		// Return JSON Response
 		c.JSON(http.StatusOK, artist)
+	})
+
+	router.GET("/albums", func(c *gin.Context) {
+		albums, err := getAlbums(c)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Return JSON Response
+		c.JSON(http.StatusOK, albums)
 	})
 
 	router.Run(":9000")
