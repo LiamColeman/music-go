@@ -61,11 +61,10 @@ func getArtists(c *gin.Context) ([]Artist, error) {
 		}
 
 		artists = append(artists, artist)
+	}
 
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
-
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return artists, nil
@@ -85,7 +84,7 @@ func getArtist(c *gin.Context, id string) (*ArtistWithAlbums, error) {
 		return nil, err
 	}
 
-	return &artist, err
+	return &artist, nil
 
 }
 
@@ -110,11 +109,10 @@ func getAlbums(c *gin.Context) ([]Album, error) {
 		}
 
 		albums = append(albums, album)
+	}
 
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
-
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return albums, nil
@@ -139,7 +137,7 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 		return nil, err
 	}
 
-	return &album, err
+	return &album, nil
 
 }
 
@@ -161,11 +159,10 @@ func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
 		}
 
 		albums = append(albums, album)
+	}
 
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
-
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return albums, nil
@@ -193,11 +190,10 @@ func getSongs(c *gin.Context) ([]Song, error) {
 		}
 
 		songs = append(songs, song)
+	}
 
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
-
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return songs, nil
@@ -210,15 +206,9 @@ func getSong(c *gin.Context, id string) (*Song, error) {
 				JOIN album ON song.album_id = album.id
 				JOIN artist ON album.artist_id = artist.id
 				WHERE song.id = $1`
-	rows, err := dbPool.Query(c, query, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	var song Song
 
-	err = dbPool.QueryRow(c, query, id).Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds, &song.AlbumName, &song.ArtistName)
+	err := dbPool.QueryRow(c, query, id).Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds, &song.AlbumName, &song.ArtistName)
 	if err != nil {
 		return nil, err
 	}
@@ -244,11 +234,10 @@ func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
 		}
 
 		songs = append(songs, song)
+	}
 
-		if err := rows.Err(); err != nil {
-			return nil, err
-		}
-
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return songs, nil
