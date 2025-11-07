@@ -117,7 +117,7 @@ func createArtist(c *gin.Context, artist CreateArtist) error {
 
 }
 
-func updateArtist(c *gin.Context, artist Artist, id string) error {
+func updateArtist(c *gin.Context, artist UpdateArtist, id string) error {
 	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1`
 
 	_, err := dbPool.Query(c, query, id, artist.Name, artist.Description)
@@ -429,7 +429,7 @@ func main() {
 		c.JSON(http.StatusOK, "Updated Artist")
 	})
 
-	router.PUT("/artists/:id", func(c *gin.Context) {
+	router.PUT("/artist/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		var newArtist UpdateArtist
 
@@ -450,7 +450,7 @@ func main() {
 		c.JSON(http.StatusOK, "Updated Artist")
 	})
 
-	router.PATCH("/artists/:id", func(c *gin.Context) {
+	router.PATCH("/artist/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
 		var newArtist PatchArtist
