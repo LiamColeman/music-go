@@ -107,16 +107,15 @@ func createArtist(c *gin.Context, artist CreateArtist) error {
 
 }
 
-func updateArtist(c *gin.Context, id string, name string, description string) (*Artist, error) {
-	var artist Artist
+func updateArtist(c *gin.Context, artist Artist) error {
 	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1`
 
-	_, err := dbPool.Query(c, query, id, name, description)
+	_, err := dbPool.Query(c, query, artist.ID, artist.Name, artist.Description)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &artist, nil
+	return nil
 
 }
 
@@ -379,7 +378,7 @@ func main() {
 		c.JSON(http.StatusOK, "Deleted Artist")
 	})
 
-	router.POST("/artist", func(c *gin.Context) {
+	router.POST("/artists", func(c *gin.Context) {
 		var newArtist CreateArtist
 
 		err := c.BindJSON(&newArtist)
@@ -391,6 +390,26 @@ func main() {
 
 		if err != nil {
 			log.Printf("Error creating artist %v", err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Updated Artist")
+	})
+
+	router.PUT("/artists", func(c *gin.Context) {
+		var newArtist Artist
+
+		err := c.BindJSON(&newArtist)
+		if err != nil {
+			return
+		}
+
+		err = updateArtist(c, newArtist)
+
+		if err != nil {
+			log.Printf("Error updating artist %v", err)
 
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
