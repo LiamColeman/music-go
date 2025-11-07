@@ -90,6 +90,18 @@ func getArtist(c *gin.Context, id string) (*ArtistWithAlbums, error) {
 
 }
 
+func deleteArtist(c *gin.Context, id string) error {
+
+	query := `DELETE FROM artist where id = $1`
+
+	_, err := dbPool.Query(c, query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func getAlbums(c *gin.Context) ([]Album, error) {
 
 	query := `SELECT album.id, album.name, album.release_year, artist.name as artist 
@@ -316,6 +328,25 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, artist)
+	})
+
+	router.DELETE("/artists/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		err := deleteArtist(c, id)
+
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Artist not found"})
+				return
+			}
+
+			log.Printf("Error deleting artist %s: %v", id, err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Deleted Artist")
 	})
 
 	router.GET("/albums", func(c *gin.Context) {
