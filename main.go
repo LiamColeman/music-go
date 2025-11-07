@@ -25,6 +25,12 @@ type CreateArtist struct {
 	Description string `json:"description"`
 }
 
+type PatchArtist struct {
+	ID          int     `json:"id"`
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
 type Album struct {
 	ID          int    `json:"id"`
 	ArtistName  string `json:"artist,omitempty"`
@@ -117,6 +123,27 @@ func updateArtist(c *gin.Context, artist Artist) error {
 
 	return nil
 
+}
+
+func patchArtist(c *gin.Context, artist PatchArtist) error {
+
+	if artist.Name != nil {
+		queryName := `UPDATE artist SET name = $2 WHERE id = $1`
+		_, err := dbPool.Query(c, queryName, artist.ID, artist.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	if artist.Name != nil {
+		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1`
+		_, err := dbPool.Query(c, queryDescription, artist.ID, artist.Description)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func deleteArtist(c *gin.Context, id string) error {
@@ -416,6 +443,26 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, "Updated Artist")
+	})
+
+	router.PATCH("/artists", func(c *gin.Context) {
+		var newArtist PatchArtist
+
+		err := c.BindJSON(&newArtist)
+		if err != nil {
+			return
+		}
+
+		err = patchArtist(c, newArtist)
+
+		if err != nil {
+			log.Printf("Error patching artist %v", err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Patched Artist")
 	})
 
 	router.GET("/albums", func(c *gin.Context) {
