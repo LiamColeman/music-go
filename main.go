@@ -143,6 +143,18 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 
 }
 
+func deleteAlbum(c *gin.Context, id string) error {
+
+	query := `DELETE FROM album where id = $1`
+
+	_, err := dbPool.Query(c, query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
 
 	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1 ORDER BY release_year DESC`
@@ -218,6 +230,18 @@ func getSong(c *gin.Context, id string) (*Song, error) {
 	return &song, nil
 }
 
+func deleteSong(c *gin.Context, id string) error {
+
+	query := `DELETE FROM song where id = $1`
+
+	_, err := dbPool.Query(c, query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
 
 	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE album_id = $1 ORDER BY track_number`
@@ -243,18 +267,6 @@ func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
 	}
 
 	return songs, nil
-}
-
-func deleteSong(c *gin.Context, id string) error {
-
-	query := `DELETE from SONG where id = $1`
-
-	_, err := dbPool.Query(c, query, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func main() {
@@ -337,6 +349,25 @@ func main() {
 		c.JSON(http.StatusOK, album)
 	})
 
+	router.DELETE("/albums/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		err := deleteAlbum(c, id)
+
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
+				return
+			}
+
+			log.Printf("Error deleting album %s: %v", id, err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Deleted Album")
+	})
+
 	router.GET("/songs", func(c *gin.Context) {
 		songs, err := getSongs(c)
 
@@ -378,7 +409,7 @@ func main() {
 				return
 			}
 
-			log.Printf("Error fetching song %s: %v", id, err)
+			log.Printf("Error deleting song %s: %v", id, err)
 
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
