@@ -139,7 +139,7 @@ func patchArtist(c *gin.Context, artist PatchArtist, id string) error {
 		}
 	}
 
-	if artist.Name != nil {
+	if artist.Description != nil {
 		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1`
 		_, err := dbPool.Query(c, queryDescription, id, artist.Description)
 		if err != nil {
