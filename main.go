@@ -429,7 +429,7 @@ func main() {
 		c.JSON(http.StatusOK, "Updated Artist")
 	})
 
-	router.PUT("/artist/:id", func(c *gin.Context) {
+	router.PUT("/artists/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		var newArtist UpdateArtist
 
@@ -450,7 +450,7 @@ func main() {
 		c.JSON(http.StatusOK, "Updated Artist")
 	})
 
-	router.PATCH("/artist/:id", func(c *gin.Context) {
+	router.PATCH("/artists/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
 		var newArtist PatchArtist
