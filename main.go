@@ -25,8 +25,12 @@ type CreateArtist struct {
 	Description string `json:"description"`
 }
 
+type UpdateArtist struct {
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
 type PatchArtist struct {
-	ID          int     `json:"id"`
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
 }
@@ -113,10 +117,10 @@ func createArtist(c *gin.Context, artist CreateArtist) error {
 
 }
 
-func updateArtist(c *gin.Context, artist Artist) error {
+func updateArtist(c *gin.Context, artist Artist, id string) error {
 	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1`
 
-	_, err := dbPool.Query(c, query, artist.ID, artist.Name, artist.Description)
+	_, err := dbPool.Query(c, query, id, artist.Name, artist.Description)
 	if err != nil {
 		return err
 	}
@@ -125,11 +129,11 @@ func updateArtist(c *gin.Context, artist Artist) error {
 
 }
 
-func patchArtist(c *gin.Context, artist PatchArtist) error {
+func patchArtist(c *gin.Context, artist PatchArtist, id string) error {
 
 	if artist.Name != nil {
 		queryName := `UPDATE artist SET name = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryName, artist.ID, artist.Name)
+		_, err := dbPool.Query(c, queryName, id, artist.Name)
 		if err != nil {
 			return err
 		}
@@ -137,7 +141,7 @@ func patchArtist(c *gin.Context, artist PatchArtist) error {
 
 	if artist.Name != nil {
 		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryDescription, artist.ID, artist.Description)
+		_, err := dbPool.Query(c, queryDescription, id, artist.Description)
 		if err != nil {
 			return err
 		}
@@ -425,15 +429,16 @@ func main() {
 		c.JSON(http.StatusOK, "Updated Artist")
 	})
 
-	router.PUT("/artists", func(c *gin.Context) {
-		var newArtist Artist
+	router.PUT("/artists/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		var newArtist UpdateArtist
 
 		err := c.BindJSON(&newArtist)
 		if err != nil {
 			return
 		}
 
-		err = updateArtist(c, newArtist)
+		err = updateArtist(c, newArtist, id)
 
 		if err != nil {
 			log.Printf("Error updating artist %v", err)
@@ -445,7 +450,9 @@ func main() {
 		c.JSON(http.StatusOK, "Updated Artist")
 	})
 
-	router.PATCH("/artists", func(c *gin.Context) {
+	router.PATCH("/artists/:id", func(c *gin.Context) {
+		id := c.Param("id")
+
 		var newArtist PatchArtist
 
 		err := c.BindJSON(&newArtist)
@@ -453,7 +460,7 @@ func main() {
 			return
 		}
 
-		err = patchArtist(c, newArtist)
+		err = patchArtist(c, newArtist, id)
 
 		if err != nil {
 			log.Printf("Error patching artist %v", err)
