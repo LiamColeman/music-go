@@ -43,13 +43,11 @@ type Album struct {
 }
 
 type UpdateAlbum struct {
-	ArtistName  string `json:"artist,omitempty"`
 	Name        string `json:"name"`
 	ReleaseYear int    `json:"release_year"`
 }
 
 type PatchAlbum struct {
-	ArtistName  *string `json:"artist,omitempty"`
 	Name        *string `json:"name"`
 	ReleaseYear *int    `json:"release_year"`
 }
@@ -224,6 +222,18 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 	}
 
 	return &album, nil
+
+}
+
+func updateAlbum(c *gin.Context, album UpdateAlbum, id string) error {
+	query := `UPDATE album SET name = $2, release_year = $3 WHERE id = $1`
+
+	_, err := dbPool.Query(c, query, id, album.Name, album.ReleaseYear)
+	if err != nil {
+		return err
+	}
+
+	return nil
 
 }
 
@@ -513,6 +523,27 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, album)
+	})
+
+	router.PUT("/albums/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		var newArtist UpdateAlbum
+
+		err := c.BindJSON(&newArtist)
+		if err != nil {
+			return
+		}
+
+		err = updateAlbum(c, newArtist, id)
+
+		if err != nil {
+			log.Printf("Error updating album %v", err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Updated Album")
 	})
 
 	router.DELETE("/albums/:id", func(c *gin.Context) {
