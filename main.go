@@ -237,6 +237,27 @@ func updateAlbum(c *gin.Context, album UpdateAlbum, id string) error {
 
 }
 
+func patchAlbum(c *gin.Context, album PatchAlbum, id string) error {
+
+	if album.Name != nil {
+		queryName := `UPDATE album SET name = $2 WHERE id = $1`
+		_, err := dbPool.Query(c, queryName, id, album.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	if album.ReleaseYear != nil {
+		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1`
+		_, err := dbPool.Query(c, queryReleaseYear, id, album.ReleaseYear)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func deleteAlbum(c *gin.Context, id string) error {
 
 	query := `DELETE FROM album where id = $1`
@@ -527,14 +548,14 @@ func main() {
 
 	router.PUT("/albums/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		var newArtist UpdateAlbum
+		var newAlbum UpdateAlbum
 
-		err := c.BindJSON(&newArtist)
+		err := c.BindJSON(&newAlbum)
 		if err != nil {
 			return
 		}
 
-		err = updateAlbum(c, newArtist, id)
+		err = updateAlbum(c, newAlbum, id)
 
 		if err != nil {
 			log.Printf("Error updating album %v", err)
@@ -544,6 +565,27 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, "Updated Album")
+	})
+
+	router.PATCH("/albums/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		var newAlbum PatchAlbum
+
+		err := c.BindJSON(&newAlbum)
+		if err != nil {
+			return
+		}
+
+		err = patchAlbum(c, newAlbum, id)
+
+		if err != nil {
+			log.Printf("Error patching album %v", err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Patched Album")
 	})
 
 	router.DELETE("/albums/:id", func(c *gin.Context) {
