@@ -42,6 +42,12 @@ type Album struct {
 	ReleaseYear int    `json:"release_year"`
 }
 
+type CreateAlbum struct {
+	ArtistID    int    `json:"artist_id"`
+	Name        string `json:"name"`
+	ReleaseYear int    `json:"release_year"`
+}
+
 type UpdateAlbum struct {
 	Name        string `json:"name"`
 	ReleaseYear int    `json:"release_year"`
@@ -61,6 +67,13 @@ type Song struct {
 	ID              int    `json:"id"`
 	ArtistName      string `json:"artist,omitempty"`
 	AlbumName       string `json:"album,omitempty"`
+	Title           string `json:"title"`
+	TrackNumber     int    `json:"track_number"`
+	DurationSeconds int    `json:"duration_seconds"`
+}
+
+type CreateSong struct {
+	AlbumID         int    `json:"album_id"`
 	Title           string `json:"title"`
 	TrackNumber     int    `json:"track_number"`
 	DurationSeconds int    `json:"duration_seconds"`
@@ -237,6 +250,18 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 
 }
 
+func createAlbum(c *gin.Context, album CreateAlbum) error {
+
+	query := `INSERT INTO album (artist_id, name, release_year) VALUES ($1, $2, $3)`
+	_, err := dbPool.Query(c, query, album.ArtistID, album.Name, album.ReleaseYear)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
 func updateAlbum(c *gin.Context, album UpdateAlbum, id string) error {
 	query := `UPDATE album SET name = $2, release_year = $3 WHERE id = $1`
 
@@ -354,6 +379,18 @@ func getSong(c *gin.Context, id string) (*Song, error) {
 	}
 
 	return &song, nil
+}
+
+func createSong(c *gin.Context, song CreateSong) error {
+
+	query := `INSERT INTO song (album_id, title, track_number, duration_seconds) VALUES ($1, $2, $3, $4)`
+	_, err := dbPool.Query(c, query, song.AlbumID, song.Title, song.TrackNumber, song.DurationSeconds)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func updateSong(c *gin.Context, song UpdateSong, id string) error {
@@ -597,6 +634,26 @@ func main() {
 		c.JSON(http.StatusOK, album)
 	})
 
+	router.POST("/albums", func(c *gin.Context) {
+		var newAlbum CreateAlbum
+
+		err := c.BindJSON(&newAlbum)
+		if err != nil {
+			return
+		}
+
+		err = createAlbum(c, newAlbum)
+
+		if err != nil {
+			log.Printf("Error creating album %v", err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Created Album")
+	})
+
 	router.PUT("/albums/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		var newAlbum UpdateAlbum
@@ -668,6 +725,26 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, songs)
+	})
+
+	router.POST("/songs", func(c *gin.Context) {
+		var newSong CreateSong
+
+		err := c.BindJSON(&newSong)
+		if err != nil {
+			return
+		}
+
+		err = createSong(c, newSong)
+
+		if err != nil {
+			log.Printf("Error creating song %v", err)
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.JSON(http.StatusOK, "Created Song")
 	})
 
 	router.GET("/songs/:id", func(c *gin.Context) {
