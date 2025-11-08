@@ -66,6 +66,18 @@ type Song struct {
 	DurationSeconds int    `json:"duration_seconds"`
 }
 
+type UpdateSong struct {
+	Title           string `json:"title"`
+	TrackNumber     int    `json:"track_number"`
+	DurationSeconds int    `json:"duration_seconds"`
+}
+
+type PatchSong struct {
+	Title           *string `json:"title"`
+	TrackNumber     *int    `json:"track_number"`
+	DurationSeconds *int    `json:"duration_seconds"`
+}
+
 type AlbumWithSongs struct {
 	Album
 	Songs []Song
