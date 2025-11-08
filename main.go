@@ -42,6 +42,18 @@ type Album struct {
 	ReleaseYear int    `json:"release_year"`
 }
 
+type UpdateAlbum struct {
+	ArtistName  string `json:"artist,omitempty"`
+	Name        string `json:"name"`
+	ReleaseYear int    `json:"release_year"`
+}
+
+type PatchAlbum struct {
+	ArtistName  *string `json:"artist,omitempty"`
+	Name        *string `json:"name"`
+	ReleaseYear *int    `json:"release_year"`
+}
+
 type ArtistWithAlbums struct {
 	Artist
 	Albums []Album
