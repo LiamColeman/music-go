@@ -43,6 +43,12 @@ type Album struct {
 	ReleaseYear int    `json:"release_year"`
 }
 
+type AlbumResponse struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	ReleaseYear int    `json:"release_year"`
+}
+
 type CreateAlbum struct {
 	ArtistID    int    `json:"artist_id"`
 	Name        string `json:"name"`
@@ -258,15 +264,17 @@ func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
 
 }
 
-func createAlbum(c *gin.Context, album CreateAlbum) error {
+func createAlbum(c *gin.Context, album CreateAlbum) (*AlbumResponse, error) {
 
-	query := `INSERT INTO album (artist_id, name, release_year) VALUES ($1, $2, $3)`
-	_, err := dbPool.Query(c, query, album.ArtistID, album.Name, album.ReleaseYear)
+	var albumCreated AlbumResponse
+
+	query := `INSERT INTO album (artist_id, name, release_year) VALUES ($1, $2, $3) RETURNING id, name, release_year`
+	err := dbPool.QueryRow(c, query, album.ArtistID, album.Name, album.ReleaseYear).Scan(&albumCreated.ID, &albumCreated.Name, &albumCreated.ReleaseYear)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &albumCreated, nil
 
 }
 
@@ -652,7 +660,7 @@ func main() {
 			return
 		}
 
-		err = createAlbum(c, newAlbum)
+		albumCreated, err := createAlbum(c, newAlbum)
 
 		if err != nil {
 			log.Printf("Error creating album %v", err)
@@ -661,7 +669,9 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusCreated, "Created Album")
+		newUrl := "Location: /albums/" + strconv.Itoa(albumCreated.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusCreated, albumCreated)
 	})
 
 	router.PUT("/albums/:id", func(c *gin.Context) {
