@@ -296,25 +296,27 @@ func updateAlbum(c *gin.Context, album UpdateAlbum, id string) (*AlbumResponse, 
 	return &updatedAlbum, nil
 }
 
-func patchAlbum(c *gin.Context, album PatchAlbum, id string) error {
+func patchAlbum(c *gin.Context, album PatchAlbum, id string) (*AlbumResponse, error) {
+
+	var patchedAlbum AlbumResponse
 
 	if album.Name != nil {
-		queryName := `UPDATE album SET name = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryName, id, album.Name)
+		queryName := `UPDATE album SET name = $2 WHERE id = $1 RETURNING id, name`
+		err := dbPool.QueryRow(c, queryName, id, album.Name).Scan(&patchedAlbum.ID, &patchedAlbum.Name)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if album.ReleaseYear != nil {
-		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryReleaseYear, id, album.ReleaseYear)
+		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1 RETURNING id, release_year`
+		err := dbPool.QueryRow(c, queryReleaseYear, id, album.ReleaseYear).Scan(&patchedAlbum.ID, &patchedAlbum.ReleaseYear)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &patchedAlbum, nil
 }
 
 func deleteAlbum(c *gin.Context, id string) error {
@@ -631,6 +633,7 @@ func main() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
 		}
+
 		newUrl := "Location: /artists/" + strconv.Itoa(patchedArtist.ID)
 		c.Header("location", newUrl)
 		c.JSON(http.StatusOK, patchedArtist)
@@ -721,7 +724,7 @@ func main() {
 			return
 		}
 
-		err = patchAlbum(c, newAlbum, id)
+		patchedAlbum, err := patchAlbum(c, newAlbum, id)
 
 		if err != nil {
 			log.Printf("Error patching album %v", err)
@@ -730,7 +733,9 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Patched Album")
+		newUrl := "Location: /artists/" + strconv.Itoa(patchedAlbum.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusOK, patchedAlbum)
 	})
 
 	router.DELETE("/albums/:id", func(c *gin.Context) {
