@@ -167,15 +167,17 @@ func createArtist(c *gin.Context, artist CreateArtist) (*Artist, error) {
 
 }
 
-func updateArtist(c *gin.Context, artist UpdateArtist, id string) error {
-	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1`
+func updateArtist(c *gin.Context, artist UpdateArtist, id string) (*Artist, error) {
+	var updatedArtist Artist
 
-	_, err := dbPool.Query(c, query, id, artist.Name, artist.Description)
+	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1 RETURNING id, name, description`
+
+	err := dbPool.QueryRow(c, query, id, artist.Name, artist.Description).Scan(&updatedArtist.ID, &updatedArtist.Name, &updatedArtist.Description)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &updatedArtist, nil
 
 }
 
@@ -590,7 +592,7 @@ func main() {
 			return
 		}
 
-		err = updateArtist(c, newArtist, id)
+		updatedArtist, err := updateArtist(c, newArtist, id)
 
 		if err != nil {
 			log.Printf("Error updating artist %v", err)
@@ -599,7 +601,9 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Updated Artist")
+		newUrl := "Location: /artists/" + strconv.Itoa(updatedArtist.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusCreated, updatedArtist)
 	})
 
 	router.PATCH("/artists/:id", func(c *gin.Context) {
