@@ -72,6 +72,13 @@ type Song struct {
 	DurationSeconds int    `json:"duration_seconds"`
 }
 
+type SongResponse struct {
+	ID              int    `json:"id"`
+	Title           string `json:"title"`
+	TrackNumber     int    `json:"track_number"`
+	DurationSeconds int    `json:"duration_seconds"`
+}
+
 type CreateSong struct {
 	AlbumID         int    `json:"album_id"`
 	Title           string `json:"title"`
@@ -381,15 +388,17 @@ func getSong(c *gin.Context, id string) (*Song, error) {
 	return &song, nil
 }
 
-func createSong(c *gin.Context, song CreateSong) error {
+func createSong(c *gin.Context, song CreateSong) (*SongResponse, error) {
 
-	query := `INSERT INTO song (album_id, title, track_number, duration_seconds) VALUES ($1, $2, $3, $4)`
-	_, err := dbPool.Query(c, query, song.AlbumID, song.Title, song.TrackNumber, song.DurationSeconds)
+	var songCreated SongResponse
+
+	query := `INSERT INTO song (album_id, title, track_number, duration_seconds) VALUES ($1, $2, $3, $4) RETURNING id, title, track_number, duration_seconds`
+	err := dbPool.QueryRow(c, query, song.AlbumID, song.Title, song.TrackNumber, song.DurationSeconds).Scan(&songCreated.ID, &songCreated.Title, &songCreated.TrackNumber, &songCreated.DurationSeconds)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &songCreated, nil
 
 }
 
@@ -557,7 +566,7 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Updated Artist")
+		c.JSON(http.StatusCreated, "Created Artist")
 	})
 
 	router.PUT("/artists/:id", func(c *gin.Context) {
@@ -651,7 +660,7 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Created Album")
+		c.JSON(http.StatusCreated, "Created Album")
 	})
 
 	router.PUT("/albums/:id", func(c *gin.Context) {
@@ -735,7 +744,7 @@ func main() {
 			return
 		}
 
-		err = createSong(c, newSong)
+		songCreated, err := createSong(c, newSong)
 
 		if err != nil {
 			log.Printf("Error creating song %v", err)
@@ -744,7 +753,7 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Created Song")
+		c.JSON(http.StatusCreated, songCreated)
 	})
 
 	router.GET("/songs/:id", func(c *gin.Context) {
