@@ -281,15 +281,17 @@ func createAlbum(c *gin.Context, album CreateAlbum) (*AlbumResponse, error) {
 
 }
 
-func updateAlbum(c *gin.Context, album UpdateAlbum, id string) error {
-	query := `UPDATE album SET name = $2, release_year = $3 WHERE id = $1`
+func updateAlbum(c *gin.Context, album UpdateAlbum, id string) (*AlbumResponse, error) {
+	var updatedAlbum AlbumResponse
 
-	_, err := dbPool.Query(c, query, id, album.Name, album.ReleaseYear)
+	query := `UPDATE album SET name = $2, release_year = $3 WHERE id = $1 RETURNING id, name, release_year`
+
+	err := dbPool.QueryRow(c, query, id, album.Name, album.ReleaseYear).Scan(&updatedAlbum.ID, &updatedAlbum.Name, &updatedAlbum.ReleaseYear)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &updatedAlbum, nil
 }
 
 func patchAlbum(c *gin.Context, album PatchAlbum, id string) error {
@@ -603,7 +605,7 @@ func main() {
 
 		newUrl := "Location: /artists/" + strconv.Itoa(updatedArtist.ID)
 		c.Header("location", newUrl)
-		c.JSON(http.StatusCreated, updatedArtist)
+		c.JSON(http.StatusOK, updatedArtist)
 	})
 
 	router.PATCH("/artists/:id", func(c *gin.Context) {
@@ -690,7 +692,7 @@ func main() {
 			return
 		}
 
-		err = updateAlbum(c, newAlbum, id)
+		updatedAlbum, err := updateAlbum(c, newAlbum, id)
 
 		if err != nil {
 			log.Printf("Error updating album %v", err)
@@ -699,7 +701,9 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Updated Album")
+		newUrl := "Location: /artists/" + strconv.Itoa(updatedAlbum.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusOK, updatedAlbum)
 	})
 
 	router.PATCH("/albums/:id", func(c *gin.Context) {
