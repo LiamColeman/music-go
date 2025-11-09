@@ -563,7 +563,7 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Deleted Artist")
+		c.JSON(http.StatusNoContent, "Deleted Artist")
 	})
 
 	router.POST("/artists", func(c *gin.Context) {
@@ -746,7 +746,7 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Deleted Album")
+		c.JSON(http.StatusNoContent, "Deleted Album")
 	})
 
 	router.GET("/songs", func(c *gin.Context) {
@@ -862,7 +862,7 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Deleted Song")
+		c.JSON(http.StatusNoContent, "Deleted Song")
 	})
 
 	router.Run(":9000")
