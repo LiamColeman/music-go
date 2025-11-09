@@ -181,25 +181,27 @@ func updateArtist(c *gin.Context, artist UpdateArtist, id string) (*Artist, erro
 
 }
 
-func patchArtist(c *gin.Context, artist PatchArtist, id string) error {
+func patchArtist(c *gin.Context, artist PatchArtist, id string) (*Artist, error) {
+
+	var patchedArtist Artist
 
 	if artist.Name != nil {
-		queryName := `UPDATE artist SET name = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryName, id, artist.Name)
+		queryName := `UPDATE artist SET name = $2 WHERE id = $1 RETURN name`
+		err := dbPool.QueryRow(c, queryName, id, artist.Name).Scan(&patchedArtist.ID, &patchedArtist.Name)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if artist.Description != nil {
 		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryDescription, id, artist.Description)
+		err := dbPool.QueryRow(c, queryDescription, id, artist.Description).Scan(&patchedArtist.ID, &patchedArtist.Description)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &patchedArtist, nil
 }
 
 func deleteArtist(c *gin.Context, id string) error {
@@ -621,7 +623,7 @@ func main() {
 			return
 		}
 
-		err = patchArtist(c, newArtist, id)
+		patchedArtist, err := patchArtist(c, newArtist, id)
 
 		if err != nil {
 			log.Printf("Error patching artist %v", err)
@@ -629,8 +631,9 @@ func main() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 			return
 		}
-
-		c.JSON(http.StatusOK, "Patched Artist")
+		newUrl := "Location: /artists/" + strconv.Itoa(patchedArtist.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusOK, patchedArtist)
 	})
 
 	router.GET("/albums", func(c *gin.Context) {
