@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -753,6 +754,8 @@ func main() {
 			return
 		}
 
+		newUrl := "Location: /songs/" + strconv.Itoa(songCreated.ID)
+		c.Header("location", newUrl)
 		c.JSON(http.StatusCreated, songCreated)
 	})
 
