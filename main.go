@@ -434,33 +434,35 @@ func updateSong(c *gin.Context, song UpdateSong, id string) (*SongResponse, erro
 	return &updateSong, nil
 }
 
-func patchSong(c *gin.Context, song PatchSong, id string) error {
+func patchSong(c *gin.Context, song PatchSong, id string) (*SongResponse, error) {
+
+	var patchedSong SongResponse
 
 	if song.Title != nil {
-		queryName := `UPDATE song SET title = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryName, id, song.Title)
+		queryName := `UPDATE song SET title = $2 WHERE id = $1 RETURNING id, title`
+		err := dbPool.QueryRow(c, queryName, id, song.Title).Scan(&patchedSong.ID, &patchedSong.Title)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if song.TrackNumber != nil {
-		queryReleaseYear := `UPDATE song SET track_number = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryReleaseYear, id, song.TrackNumber)
+		queryReleaseYear := `UPDATE song SET track_number = $2 WHERE id = $1 RETURNING id, track_number`
+		err := dbPool.QueryRow(c, queryReleaseYear, id, song.TrackNumber).Scan(&patchedSong.ID, &patchedSong.TrackNumber)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if song.DurationSeconds != nil {
-		queryReleaseYear := `UPDATE song SET duration_seconds = $2 WHERE id = $1`
-		_, err := dbPool.Query(c, queryReleaseYear, id, song.DurationSeconds)
+		queryReleaseYear := `UPDATE song SET duration_seconds = $2 WHERE id = $1 RETURNING id, duration_seconds`
+		err := dbPool.QueryRow(c, queryReleaseYear, id, song.DurationSeconds).Scan(&patchedSong.ID, &patchedSong.DurationSeconds)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &patchedSong, nil
 }
 
 func deleteSong(c *gin.Context, id string) error {
@@ -842,7 +844,7 @@ func main() {
 			return
 		}
 
-		err = patchSong(c, newSong, id)
+		patchedSong, err := patchSong(c, newSong, id)
 
 		if err != nil {
 			log.Printf("Error patching song %v", err)
@@ -851,7 +853,9 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Patched Song")
+		newUrl := "Location: /songs/" + strconv.Itoa(patchedSong.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusCreated, patchedSong)
 	})
 
 	router.DELETE("/songs/:id", func(c *gin.Context) {
