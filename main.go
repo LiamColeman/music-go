@@ -416,15 +416,18 @@ func createSong(c *gin.Context, song CreateSong) (*SongResponse, error) {
 
 }
 
-func updateSong(c *gin.Context, song UpdateSong, id string) error {
-	query := `UPDATE song SET title = $2, track_number = $3, duration_seconds = $4 WHERE id = $1`
+func updateSong(c *gin.Context, song UpdateSong, id string) (*SongResponse, error) {
 
-	_, err := dbPool.Query(c, query, id, song.Title, song.TrackNumber, song.DurationSeconds)
+	var updateSong SongResponse
+
+	query := `UPDATE song SET title = $2, track_number = $3, duration_seconds = $4 WHERE id = $1 RETURNING id, title, track_number, duration_seconds`
+
+	err := dbPool.QueryRow(c, query, id, song.Title, song.TrackNumber, song.DurationSeconds).Scan(&updateSong.ID, &updateSong.Title, &updateSong.TrackNumber, &updateSong.DurationSeconds)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &updateSong, nil
 }
 
 func patchSong(c *gin.Context, song PatchSong, id string) error {
@@ -808,7 +811,7 @@ func main() {
 			return
 		}
 
-		err = updateSong(c, newSong, id)
+		updatedSong, err := updateSong(c, newSong, id)
 
 		if err != nil {
 			log.Printf("Error updating song %v", err)
@@ -817,7 +820,9 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, "Updated Song")
+		newUrl := "Location: /songs/" + strconv.Itoa(updatedSong.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusCreated, updatedSong)
 	})
 
 	router.PATCH("/songs/:id", func(c *gin.Context) {
