@@ -154,15 +154,16 @@ func getArtist(c *gin.Context, id string) (*ArtistWithAlbums, error) {
 
 }
 
-func createArtist(c *gin.Context, artist CreateArtist) error {
+func createArtist(c *gin.Context, artist CreateArtist) (*Artist, error) {
 
-	query := `INSERT INTO artist (name, description) VALUES ($1, $2)`
-	_, err := dbPool.Query(c, query, artist.Name, artist.Description)
+	var createdArtist Artist
+	query := `INSERT INTO artist (name, description) VALUES ($1, $2) RETURNING id, name, description`
+	err := dbPool.QueryRow(c, query, artist.Name, artist.Description).Scan(&createdArtist.ID, &createdArtist.Name, &createdArtist.Description)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &createdArtist, nil
 
 }
 
@@ -566,7 +567,7 @@ func main() {
 			return
 		}
 
-		err = createArtist(c, newArtist)
+		createdArtist, err := createArtist(c, newArtist)
 
 		if err != nil {
 			log.Printf("Error creating artist %v", err)
@@ -575,7 +576,9 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusCreated, "Created Artist")
+		newUrl := "Location: /artists/" + strconv.Itoa(createdArtist.ID)
+		c.Header("location", newUrl)
+		c.JSON(http.StatusCreated, createdArtist)
 	})
 
 	router.PUT("/artists/:id", func(c *gin.Context) {
