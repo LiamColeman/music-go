@@ -106,19 +106,26 @@ func (r *SongRepository) PatchSong(ctx context.Context, song model.PatchSong, id
 	}
 
 	if song.TrackNumber != nil {
-		queryReleaseYear := `UPDATE song SET track_number = $2 WHERE id = $1 RETURNING id, track_number`
-		err := r.dbPool.QueryRow(ctx, queryReleaseYear, id, song.TrackNumber).Scan(&patchedSong.ID, &patchedSong.TrackNumber)
+		queryReleaseYear := `UPDATE song SET track_number = $2 WHERE id = $1`
+		_, err := r.dbPool.Exec(ctx, queryReleaseYear, id, song.TrackNumber)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if song.DurationSeconds != nil {
-		queryReleaseYear := `UPDATE song SET duration_seconds = $2 WHERE id = $1 RETURNING id, duration_seconds`
-		err := r.dbPool.QueryRow(ctx, queryReleaseYear, id, song.DurationSeconds).Scan(&patchedSong.ID, &patchedSong.DurationSeconds)
+		queryReleaseYear := `UPDATE song SET duration_seconds = $2 WHERE id = $1`
+		_, err := r.dbPool.Exec(ctx, queryReleaseYear, id, song.DurationSeconds)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE id = $1`
+
+	err := r.dbPool.QueryRow(ctx, query, id).Scan(&patchedSong.ID, &patchedSong.Title, &patchedSong.TrackNumber, &patchedSong.DurationSeconds)
+	if err != nil {
+		return nil, err
 	}
 
 	return &patchedSong, nil

@@ -120,8 +120,8 @@ func (r *ArtistRepository) PatchArtist(ctx context.Context, artist model.PatchAr
 	var patchedArtist model.Artist
 
 	if artist.Name != nil {
-		queryName := `UPDATE artist SET name = $2 WHERE id = $1 RETURN name`
-		err := r.dbPool.QueryRow(ctx, queryName, id, artist.Name).Scan(&patchedArtist.ID, &patchedArtist.Name)
+		queryName := `UPDATE artist SET name = $2 WHERE id = $1`
+		_, err := r.dbPool.Exec(ctx, queryName, id, artist.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -129,10 +129,17 @@ func (r *ArtistRepository) PatchArtist(ctx context.Context, artist model.PatchAr
 
 	if artist.Description != nil {
 		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1`
-		err := r.dbPool.QueryRow(ctx, queryDescription, id, artist.Description).Scan(&patchedArtist.ID, &patchedArtist.Description)
+		_, err := r.dbPool.Exec(ctx, queryDescription, id, artist.Description)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	query := `SELECT id, name, description FROM artist WHERE id = $1`
+
+	err := r.dbPool.QueryRow(ctx, query, id).Scan(&patchedArtist.ID, &patchedArtist.Name, &patchedArtist.Description)
+	if err != nil {
+		return nil, err
 	}
 
 	return &patchedArtist, nil

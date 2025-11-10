@@ -102,19 +102,26 @@ func (r *AlbumRepository) PatchAlbum(ctx context.Context, album model.PatchAlbum
 	var patchedAlbum model.AlbumResponse
 
 	if album.Name != nil {
-		queryName := `UPDATE album SET name = $2 WHERE id = $1 RETURNING id, name`
-		err := r.dbPool.QueryRow(ctx, queryName, id, album.Name).Scan(&patchedAlbum.ID, &patchedAlbum.Name)
+		queryName := `UPDATE album SET name = $2 WHERE id = $1`
+		_, err := r.dbPool.Exec(ctx, queryName, id, album.Name)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if album.ReleaseYear != nil {
-		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1 RETURNING id, release_year`
-		err := r.dbPool.QueryRow(ctx, queryReleaseYear, id, album.ReleaseYear).Scan(&patchedAlbum.ID, &patchedAlbum.ReleaseYear)
+		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1`
+		_, err := r.dbPool.Exec(ctx, queryReleaseYear, id, album.ReleaseYear)
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	query := `SELECT id, name, release_year, name FROM album WHERE id = $1`
+
+	err := r.dbPool.QueryRow(ctx, query, id).Scan(&patchedAlbum.ID, &patchedAlbum.Name, &patchedAlbum.ReleaseYear)
+	if err != nil {
+		return nil, err
 	}
 
 	return &patchedAlbum, nil
