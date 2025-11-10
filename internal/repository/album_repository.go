@@ -117,7 +117,7 @@ func (r *AlbumRepository) PatchAlbum(ctx context.Context, album model.PatchAlbum
 		}
 	}
 
-	query := `SELECT id, name, release_year, name FROM album WHERE id = $1`
+	query := `SELECT id, name, release_year FROM album WHERE id = $1`
 
 	err := r.dbPool.QueryRow(ctx, query, id).Scan(&patchedAlbum.ID, &patchedAlbum.Name, &patchedAlbum.ReleaseYear)
 	if err != nil {
