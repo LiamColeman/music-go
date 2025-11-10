@@ -1,15 +1,15 @@
-# Setup and Run
+# Music API
+REST API for artists, albums, and songs backed by a PostgreSQL database. This is a sample project I build for learning go.
 
-## Start the docker
-`docker compose up -d`
+## Running
+Start docker, then start the server
 
-## Start the server
-`DATABASE_URL=postgresql://postgres:gizzard@localhost:5432/albums go run main.go`
+    docker compose up -d
+    DATABASE_URL=postgresql://postgres:gizzard@localhost:5432/albums go run main.go
 
+## Examples
 
-# Examples
-
-## Example Artist Create
+Create an artist
 ```
 curl --request POST \
   --url http://localhost:9000/artists \
@@ -20,8 +20,7 @@ curl --request POST \
 }'
 ```
 
-## Example Album Create
-
+Create an album
 ```
 curl --request POST \
   --url http://localhost:9000/albums \
@@ -33,8 +32,7 @@ curl --request POST \
   },'
 ```
 
-## Example Song Create
-
+Create a song
 ```
 curl --request POST \
   --url http://localhost:9000/songs \
@@ -47,8 +45,7 @@ curl --request POST \
   }'
 ```
 
-## Example Song Update
-
+Update a song
 ```
 curl --request PUT \
   --url http://localhost:9000/songs/9 \
@@ -60,8 +57,8 @@ curl --request PUT \
   }'
 ```
 
-## Example Delete of Artist
-Note: Deleting an artist will cascade delete the artist, album, and songs
+Delete an Artist 
+Note: Deleting an artist will cascade delete the albums and songs for the artist
 ```
 curl --request DELETE \
   --url http://localhost:9000/artists/5 \
