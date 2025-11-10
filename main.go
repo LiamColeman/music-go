@@ -112,192 +112,6 @@ type AlbumWithSongs struct {
 	Songs []Song
 }
 
-func getArtists(c *gin.Context) ([]Artist, error) {
-	query := `SELECT id, name, description FROM artist`
-	rows, err := dbPool.Query(c, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	artists := []Artist{}
-
-	for rows.Next() {
-		var artist Artist
-		if err := rows.Scan(&artist.ID, &artist.Name, &artist.Description); err != nil {
-			return nil, err
-		}
-
-		artists = append(artists, artist)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return artists, nil
-}
-
-func getArtist(c *gin.Context, id string) (*ArtistWithAlbums, error) {
-	var artist ArtistWithAlbums
-	query := `SELECT id, name, description FROM artist WHERE id = $1`
-
-	err := dbPool.QueryRow(c, query, id).Scan(&artist.ID, &artist.Name, &artist.Description)
-	if err != nil {
-		return nil, err
-	}
-
-	artist.Albums, err = getAlbumsForArtist(c, artist.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &artist, nil
-
-}
-
-func getAlbums(c *gin.Context) ([]Album, error) {
-
-	query := `SELECT album.id, album.name, album.release_year, artist.name as artist 
-			FROM album 
-			JOIN artist ON album.artist_id = artist.id 
-			ORDER BY artist.name, album.name`
-	rows, err := dbPool.Query(c, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	albums := []Album{}
-
-	for rows.Next() {
-		var album Album
-		if err := rows.Scan(&album.ID, &album.Name, &album.ReleaseYear, &album.ArtistName); err != nil {
-			return nil, err
-		}
-
-		albums = append(albums, album)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return albums, nil
-}
-
-func getAlbum(c *gin.Context, id string) (*AlbumWithSongs, error) {
-
-	var album AlbumWithSongs
-
-	query := `SELECT album.id, album.name, album.release_year, artist.name as artist 
-		FROM album 
-		JOIN artist ON album.artist_id = artist.id 
-		WHERE album.id = $1`
-
-	err := dbPool.QueryRow(c, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear, &album.ArtistName)
-	if err != nil {
-		return nil, err
-	}
-
-	album.Songs, err = getSongsForAlbum(c, album.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &album, nil
-
-}
-
-func createAlbum(c *gin.Context, album CreateAlbum) (*AlbumResponse, error) {
-
-	var albumCreated AlbumResponse
-
-	query := `INSERT INTO album (artist_id, name, release_year) VALUES ($1, $2, $3) RETURNING id, name, release_year`
-	err := dbPool.QueryRow(c, query, album.ArtistID, album.Name, album.ReleaseYear).Scan(&albumCreated.ID, &albumCreated.Name, &albumCreated.ReleaseYear)
-	if err != nil {
-		return nil, err
-	}
-
-	return &albumCreated, nil
-
-}
-
-func updateAlbum(c *gin.Context, album UpdateAlbum, id string) (*AlbumResponse, error) {
-	var updatedAlbum AlbumResponse
-
-	query := `UPDATE album SET name = $2, release_year = $3 WHERE id = $1 RETURNING id, name, release_year`
-
-	err := dbPool.QueryRow(c, query, id, album.Name, album.ReleaseYear).Scan(&updatedAlbum.ID, &updatedAlbum.Name, &updatedAlbum.ReleaseYear)
-	if err != nil {
-		return nil, err
-	}
-
-	return &updatedAlbum, nil
-}
-
-func patchAlbum(c *gin.Context, album PatchAlbum, id string) (*AlbumResponse, error) {
-
-	var patchedAlbum AlbumResponse
-
-	if album.Name != nil {
-		queryName := `UPDATE album SET name = $2 WHERE id = $1 RETURNING id, name`
-		err := dbPool.QueryRow(c, queryName, id, album.Name).Scan(&patchedAlbum.ID, &patchedAlbum.Name)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if album.ReleaseYear != nil {
-		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1 RETURNING id, release_year`
-		err := dbPool.QueryRow(c, queryReleaseYear, id, album.ReleaseYear).Scan(&patchedAlbum.ID, &patchedAlbum.ReleaseYear)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &patchedAlbum, nil
-}
-
-func deleteAlbum(c *gin.Context, id string) error {
-
-	query := `DELETE FROM album where id = $1`
-
-	_, err := dbPool.Query(c, query, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getAlbumsForArtist(c *gin.Context, artistID int) ([]Album, error) {
-
-	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1 ORDER BY release_year DESC`
-	rows, err := dbPool.Query(c, query, artistID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	albums := []Album{}
-
-	for rows.Next() {
-		var album Album
-		if err := rows.Scan(&album.ID, &album.Name, &album.ReleaseYear); err != nil {
-			return nil, err
-		}
-
-		albums = append(albums, album)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return albums, nil
-}
-
 func getSongs(c *gin.Context) ([]Song, error) {
 
 	query := `SELECT song.id, song.title, song.track_number, song.duration_seconds, album.name as album, artist.name as artist
@@ -417,33 +231,6 @@ func deleteSong(c *gin.Context, id string) error {
 	return nil
 }
 
-func getSongsForAlbum(c *gin.Context, albumID int) ([]Song, error) {
-
-	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE album_id = $1 ORDER BY track_number`
-	rows, err := dbPool.Query(c, query, albumID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	songs := []Song{}
-
-	for rows.Next() {
-		var song Song
-		if err := rows.Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds); err != nil {
-			return nil, err
-		}
-
-		songs = append(songs, song)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return songs, nil
-}
-
 func main() {
 
 	var err error
@@ -456,8 +243,10 @@ func main() {
 	// TODO: Add other handlers and repos
 
 	artistRepo := repository.NewArtistRepository(dbPool)
-
 	artistHandler := handler.NewArtistHandler(artistRepo)
+
+	albumRepo := repository.NewAlbumRepository(dbPool)
+	albumHandler := handler.NewAlbumHandler(albumRepo)
 
 	router := gin.Default()
 
@@ -475,123 +264,12 @@ func main() {
 	router.PATCH("/artists/:id", artistHandler.PatchArtist)
 	router.DELETE("/artists/:id", artistHandler.DeleteArtist)
 
-	router.GET("/albums", func(c *gin.Context) {
-		albums, err := getAlbums(c)
-
-		if err != nil {
-			log.Printf("Error fetching artists: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-			return
-		}
-
-		c.JSON(http.StatusOK, albums)
-	})
-
-	router.GET("/albums/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		album, err := getAlbum(c, id)
-
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
-				return
-			}
-
-			log.Printf("Error fetching album %s: %v", id, err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		c.JSON(http.StatusOK, album)
-	})
-
-	router.POST("/albums", func(c *gin.Context) {
-		var newAlbum CreateAlbum
-
-		err := c.BindJSON(&newAlbum)
-		if err != nil {
-			return
-		}
-
-		albumCreated, err := createAlbum(c, newAlbum)
-
-		if err != nil {
-			log.Printf("Error creating album %v", err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		newUrl := "Location: /albums/" + strconv.Itoa(albumCreated.ID)
-		c.Header("location", newUrl)
-		c.JSON(http.StatusCreated, albumCreated)
-	})
-
-	router.PUT("/albums/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		var newAlbum UpdateAlbum
-
-		err := c.BindJSON(&newAlbum)
-		if err != nil {
-			return
-		}
-
-		updatedAlbum, err := updateAlbum(c, newAlbum, id)
-
-		if err != nil {
-			log.Printf("Error updating album %v", err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		newUrl := "Location: /artists/" + strconv.Itoa(updatedAlbum.ID)
-		c.Header("location", newUrl)
-		c.JSON(http.StatusOK, updatedAlbum)
-	})
-
-	router.PATCH("/albums/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		var newAlbum PatchAlbum
-
-		err := c.BindJSON(&newAlbum)
-		if err != nil {
-			return
-		}
-
-		patchedAlbum, err := patchAlbum(c, newAlbum, id)
-
-		if err != nil {
-			log.Printf("Error patching album %v", err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		newUrl := "Location: /artists/" + strconv.Itoa(patchedAlbum.ID)
-		c.Header("location", newUrl)
-		c.JSON(http.StatusOK, patchedAlbum)
-	})
-
-	router.DELETE("/albums/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		err := deleteAlbum(c, id)
-
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
-				return
-			}
-
-			log.Printf("Error deleting album %s: %v", id, err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		c.JSON(http.StatusNoContent, "Deleted Album")
-	})
+	router.GET("/albums", albumHandler.GetAll)
+	router.GET("/albums/:id", albumHandler.GetAlbum)
+	router.POST("/albums", albumHandler.CreateAlbum)
+	router.PUT("/albums/:id", albumHandler.UpdateAlbum)
+	router.PATCH("/albums/:id", albumHandler.PatchAlbum)
+	router.DELETE("/albums/:id", albumHandler.DeleteAlbum)
 
 	router.GET("/songs", func(c *gin.Context) {
 		songs, err := getSongs(c)
