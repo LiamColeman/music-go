@@ -23,6 +23,7 @@ func (r *AlbumRepository) GetAlbums(ctx context.Context) ([]model.Album, error) 
 	query := `SELECT album.id, album.name, album.release_year, artist.name as artist 
 			FROM album 
 			JOIN artist ON album.artist_id = artist.id 
+			WHERE album.archived = FALSE
 			ORDER BY artist.name, album.name`
 	rows, err := r.dbPool.Query(ctx, query)
 	if err != nil {
@@ -55,7 +56,7 @@ func (r *AlbumRepository) GetAlbum(ctx context.Context, id string) (*model.Album
 	query := `SELECT album.id, album.name, album.release_year, artist.name as artist 
 		FROM album 
 		JOIN artist ON album.artist_id = artist.id 
-		WHERE album.id = $1`
+		WHERE album.id = $1 AND album.archived = FALSE`
 
 	err := r.dbPool.QueryRow(ctx, query, id).Scan(&album.ID, &album.Name, &album.ReleaseYear, &album.ArtistName)
 	if err != nil {
@@ -75,7 +76,7 @@ func (r *AlbumRepository) CreateAlbum(ctx context.Context, album model.CreateAlb
 
 	var albumCreated model.AlbumResponse
 
-	query := `INSERT INTO album (artist_id, name, release_year) VALUES ($1, $2, $3) RETURNING id, name, release_year`
+	query := `INSERT INTO album (artist_id, name, release_year, archived) VALUES ($1, $2, $3, FALSE) RETURNING id, name, release_year`
 	err := r.dbPool.QueryRow(ctx, query, album.ArtistID, album.Name, album.ReleaseYear).Scan(&albumCreated.ID, &albumCreated.Name, &albumCreated.ReleaseYear)
 	if err != nil {
 		return nil, err
@@ -88,7 +89,7 @@ func (r *AlbumRepository) CreateAlbum(ctx context.Context, album model.CreateAlb
 func (r *AlbumRepository) UpdateAlbum(ctx context.Context, album model.UpdateAlbum, id string) (*model.AlbumResponse, error) {
 	var updatedAlbum model.AlbumResponse
 
-	query := `UPDATE album SET name = $2, release_year = $3 WHERE id = $1 RETURNING id, name, release_year`
+	query := `UPDATE album SET name = $2, release_year = $3 WHERE id = $1 AND archived = FALSE RETURNING id, name, release_year`
 
 	err := r.dbPool.QueryRow(ctx, query, id, album.Name, album.ReleaseYear).Scan(&updatedAlbum.ID, &updatedAlbum.Name, &updatedAlbum.ReleaseYear)
 	if err != nil {
@@ -103,7 +104,7 @@ func (r *AlbumRepository) PatchAlbum(ctx context.Context, album model.PatchAlbum
 	var patchedAlbum model.AlbumResponse
 
 	if album.Name != nil {
-		queryName := `UPDATE album SET name = $2 WHERE id = $1`
+		queryName := `UPDATE album SET name = $2 WHERE id = $1 AND archived = FALSE`
 		_, err := r.dbPool.Exec(ctx, queryName, id, album.Name)
 		if err != nil {
 			return nil, err
@@ -111,14 +112,14 @@ func (r *AlbumRepository) PatchAlbum(ctx context.Context, album model.PatchAlbum
 	}
 
 	if album.ReleaseYear != nil {
-		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1`
+		queryReleaseYear := `UPDATE album SET release_year = $2 WHERE id = $1 AND archived = FALSE`
 		_, err := r.dbPool.Exec(ctx, queryReleaseYear, id, album.ReleaseYear)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	query := `SELECT id, name, release_year FROM album WHERE id = $1`
+	query := `SELECT id, name, release_year FROM album WHERE id = $1 AND archived = FALSE`
 
 	err := r.dbPool.QueryRow(ctx, query, id).Scan(&patchedAlbum.ID, &patchedAlbum.Name, &patchedAlbum.ReleaseYear)
 	if err != nil {
@@ -130,7 +131,7 @@ func (r *AlbumRepository) PatchAlbum(ctx context.Context, album model.PatchAlbum
 
 func (r *AlbumRepository) GetSongsForAlbum(ctx context.Context, albumID int) ([]model.Song, error) {
 
-	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE album_id = $1 ORDER BY track_number`
+	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE album_id = $1 AND archived = FALSE ORDER BY track_number`
 	rows, err := r.dbPool.Query(ctx, query, albumID)
 	if err != nil {
 		return nil, err
@@ -157,7 +158,9 @@ func (r *AlbumRepository) GetSongsForAlbum(ctx context.Context, albumID int) ([]
 
 func (r *AlbumRepository) DeleteAlbum(ctx context.Context, id string) error {
 
-	query := `DELETE FROM album where id = $1`
+	// TODO: Cascade and set songs as well
+	// query := `DELETE FROM album where id = $1`
+	query := `UPDATE album SET archived = TRUE where id = $1`
 
 	_, err := r.dbPool.Exec(ctx, query, id)
 	if err != nil {

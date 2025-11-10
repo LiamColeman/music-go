@@ -89,6 +89,11 @@ func (h *AlbumHandler) UpdateAlbum(c *gin.Context) {
 	updatedAlbum, err := h.albumRepo.UpdateAlbum(c.Request.Context(), newAlbum, id)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
+			return
+		}
+
 		log.Printf("Error updating album %v", err)
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -112,6 +117,11 @@ func (h *AlbumHandler) PatchAlbum(c *gin.Context) {
 	patchedAlbum, err := h.albumRepo.PatchAlbum(c.Request.Context(), newAlbum, id)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Album not found"})
+			return
+		}
+
 		log.Printf("Error patching album %v", err)
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
