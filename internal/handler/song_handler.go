@@ -137,5 +137,5 @@ func (h *SongHandler) DeleteSong(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, "Deleted Song")
+	c.Status(http.StatusNoContent)
 }

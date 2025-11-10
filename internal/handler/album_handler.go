@@ -137,5 +137,5 @@ func (h *AlbumHandler) DeleteAlbum(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, "Deleted Album")
+	c.Status(http.StatusNoContent)
 }

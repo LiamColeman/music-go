@@ -138,5 +138,5 @@ func (h *ArtistHandler) DeleteArtist(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, "Deleted Artist")
+	c.Status(http.StatusNoContent)
 }
