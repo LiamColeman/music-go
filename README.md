@@ -7,6 +7,18 @@ Start docker, then start the server
     docker compose up -d
     DATABASE_URL=postgresql://postgres:gizzard@localhost:5432/albums go run main.go
 
+## Enable Live Reload During Development (Optional)
+
+Install [Air](https://github.com/air-verse/air?tab=readme-ov-file#via-go-install-recommended)
+
+    go install github.com/air-verse/air@latest
+
+Start Air
+
+    Air
+
+
+
 ## Examples
 
 Create an artist
