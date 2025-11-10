@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"music-go/internal/handler"
+	"music-go/internal/repository"
 	"net/http"
 	"os"
 	"strconv"
@@ -513,6 +515,12 @@ func main() {
 	}
 	defer dbPool.Close()
 
+	// TODO: Add other handlers and repos
+
+	artistRepo := repository.NewArtistRepository(dbPool)
+
+	artistHandler := handler.NewArtistHandler(artistRepo)
+
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
@@ -522,17 +530,19 @@ func main() {
 		})
 	})
 
-	router.GET("/artists", func(c *gin.Context) {
-		artists, err := getArtists(c)
+	router.GET("/artists", artistHandler.GetAll)
 
-		if err != nil {
-			log.Printf("Error fetching artists: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-			return
-		}
+	// router.GET("/artists", func(c *gin.Context) {
+	// 	artists, err := getArtists(c)
 
-		c.JSON(http.StatusOK, artists)
-	})
+	// 	if err != nil {
+	// 		log.Printf("Error fetching artists: %v", err)
+	// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+	// 		return
+	// 	}
+
+	// 	c.JSON(http.StatusOK, artists)
+	// })
 
 	router.GET("/artists/:id", func(c *gin.Context) {
 		id := c.Param("id")
