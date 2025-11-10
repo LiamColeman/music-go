@@ -24,6 +24,7 @@ func (r *SongRepository) GetSongs(ctx context.Context) ([]model.Song, error) {
 				FROM song
 				JOIN album ON song.album_id = album.id
 				JOIN artist ON album.artist_id = artist.id
+				WHERE song.archived = FALSE
 				ORDER BY song.title`
 	rows, err := r.dbPool.Query(ctx, query)
 	if err != nil {
@@ -55,7 +56,7 @@ func (r *SongRepository) GetSong(ctx context.Context, id string) (*model.Song, e
 				FROM song
 				JOIN album ON song.album_id = album.id
 				JOIN artist ON album.artist_id = artist.id
-				WHERE song.id = $1`
+				WHERE song.id = $1 AND song.archived = FALSE`
 	var song model.Song
 
 	err := r.dbPool.QueryRow(ctx, query, id).Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds, &song.AlbumName, &song.ArtistName)
@@ -70,7 +71,7 @@ func (r *SongRepository) CreateSong(ctx context.Context, song model.CreateSong) 
 
 	var songCreated model.SongResponse
 
-	query := `INSERT INTO song (album_id, title, track_number, duration_seconds) VALUES ($1, $2, $3, $4) RETURNING id, title, track_number, duration_seconds`
+	query := `INSERT INTO song (album_id, title, track_number, duration_seconds, archived) VALUES ($1, $2, $3, $4, FALSE) RETURNING id, title, track_number, duration_seconds`
 	err := r.dbPool.QueryRow(ctx, query, song.AlbumID, song.Title, song.TrackNumber, song.DurationSeconds).Scan(&songCreated.ID, &songCreated.Title, &songCreated.TrackNumber, &songCreated.DurationSeconds)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (r *SongRepository) UpdateSong(ctx context.Context, song model.UpdateSong, 
 
 	var updateSong model.SongResponse
 
-	query := `UPDATE song SET title = $2, track_number = $3, duration_seconds = $4 WHERE id = $1 RETURNING id, title, track_number, duration_seconds`
+	query := `UPDATE song SET title = $2, track_number = $3, duration_seconds = $4 WHERE id = $1 AND archived = FALSE RETURNING id, title, track_number, duration_seconds`
 
 	err := r.dbPool.QueryRow(ctx, query, id, song.Title, song.TrackNumber, song.DurationSeconds).Scan(&updateSong.ID, &updateSong.Title, &updateSong.TrackNumber, &updateSong.DurationSeconds)
 	if err != nil {
@@ -99,7 +100,7 @@ func (r *SongRepository) PatchSong(ctx context.Context, song model.PatchSong, id
 	var patchedSong model.SongResponse
 
 	if song.Title != nil {
-		queryName := `UPDATE song SET title = $2 WHERE id = $1 RETURNING id, title`
+		queryName := `UPDATE song SET title = $2 WHERE id = $1 AND archived = FALSE RETURNING id, title`
 		err := r.dbPool.QueryRow(ctx, queryName, id, song.Title).Scan(&patchedSong.ID, &patchedSong.Title)
 		if err != nil {
 			return nil, err
@@ -107,7 +108,7 @@ func (r *SongRepository) PatchSong(ctx context.Context, song model.PatchSong, id
 	}
 
 	if song.TrackNumber != nil {
-		queryReleaseYear := `UPDATE song SET track_number = $2 WHERE id = $1`
+		queryReleaseYear := `UPDATE song SET track_number = $2 WHERE id = $1 AND archived = FALSE`
 		_, err := r.dbPool.Exec(ctx, queryReleaseYear, id, song.TrackNumber)
 		if err != nil {
 			return nil, err
@@ -115,14 +116,14 @@ func (r *SongRepository) PatchSong(ctx context.Context, song model.PatchSong, id
 	}
 
 	if song.DurationSeconds != nil {
-		queryReleaseYear := `UPDATE song SET duration_seconds = $2 WHERE id = $1`
+		queryReleaseYear := `UPDATE song SET duration_seconds = $2 WHERE id = $1 AND archived = FALSE`
 		_, err := r.dbPool.Exec(ctx, queryReleaseYear, id, song.DurationSeconds)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE id = $1`
+	query := `SELECT id, title, track_number, duration_seconds FROM song WHERE id = $1 AND archived = FALSE`
 
 	err := r.dbPool.QueryRow(ctx, query, id).Scan(&patchedSong.ID, &patchedSong.Title, &patchedSong.TrackNumber, &patchedSong.DurationSeconds)
 	if err != nil {
@@ -134,7 +135,8 @@ func (r *SongRepository) PatchSong(ctx context.Context, song model.PatchSong, id
 
 func (r *SongRepository) DeleteSong(ctx context.Context, id string) error {
 
-	query := `DELETE FROM song where id = $1`
+	// query := `DELETE FROM song where id = $1`
+	query := `UPDATE song SET archived = TRUE WHERE id = $1`
 
 	_, err := r.dbPool.Exec(ctx, query, id)
 	if err != nil {
