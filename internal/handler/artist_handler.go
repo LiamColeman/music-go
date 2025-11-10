@@ -61,7 +61,7 @@ func (h *ArtistHandler) CreateArtist(c *gin.Context) {
 		return
 	}
 
-	createdArtist, err := h.artistRepo.CreateArtist(c, newArtist)
+	createdArtist, err := h.artistRepo.CreateArtist(c.Request.Context(), newArtist)
 
 	if err != nil {
 		log.Printf("Error creating artist %v", err)
@@ -84,7 +84,7 @@ func (h *ArtistHandler) UpdateArtist(c *gin.Context) {
 		return
 	}
 
-	updatedArtist, err := h.artistRepo.UpdateArtist(c, newArtist, id)
+	updatedArtist, err := h.artistRepo.UpdateArtist(c.Request.Context(), newArtist, id)
 
 	if err != nil {
 		log.Printf("Error updating artist %v", err)
@@ -108,7 +108,7 @@ func (h *ArtistHandler) PatchArtist(c *gin.Context) {
 		return
 	}
 
-	patchedArtist, err := h.artistRepo.PatchArtist(c, newArtist, id)
+	patchedArtist, err := h.artistRepo.PatchArtist(c.Request.Context(), newArtist, id)
 
 	if err != nil {
 		log.Printf("Error patching artist %v", err)

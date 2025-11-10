@@ -2,16 +2,13 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
 	"music-go/internal/handler"
 	"music-go/internal/repository"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -112,125 +109,6 @@ type AlbumWithSongs struct {
 	Songs []Song
 }
 
-func getSongs(c *gin.Context) ([]Song, error) {
-
-	query := `SELECT song.id, song.title, song.track_number, song.duration_seconds, album.name as album, artist.name as artist
-				FROM song
-				JOIN album ON song.album_id = album.id
-				JOIN artist ON album.artist_id = artist.id
-				ORDER BY song.title`
-	rows, err := dbPool.Query(c, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	songs := []Song{}
-
-	for rows.Next() {
-		var song Song
-		if err := rows.Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds, &song.AlbumName, &song.ArtistName); err != nil {
-			return nil, err
-		}
-
-		songs = append(songs, song)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return songs, nil
-}
-
-func getSong(c *gin.Context, id string) (*Song, error) {
-
-	query := `SELECT song.id, song.title, song.track_number, song.duration_seconds, album.name as album, artist.name as artist
-				FROM song
-				JOIN album ON song.album_id = album.id
-				JOIN artist ON album.artist_id = artist.id
-				WHERE song.id = $1`
-	var song Song
-
-	err := dbPool.QueryRow(c, query, id).Scan(&song.ID, &song.Title, &song.TrackNumber, &song.DurationSeconds, &song.AlbumName, &song.ArtistName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &song, nil
-}
-
-func createSong(c *gin.Context, song CreateSong) (*SongResponse, error) {
-
-	var songCreated SongResponse
-
-	query := `INSERT INTO song (album_id, title, track_number, duration_seconds) VALUES ($1, $2, $3, $4) RETURNING id, title, track_number, duration_seconds`
-	err := dbPool.QueryRow(c, query, song.AlbumID, song.Title, song.TrackNumber, song.DurationSeconds).Scan(&songCreated.ID, &songCreated.Title, &songCreated.TrackNumber, &songCreated.DurationSeconds)
-	if err != nil {
-		return nil, err
-	}
-
-	return &songCreated, nil
-
-}
-
-func updateSong(c *gin.Context, song UpdateSong, id string) (*SongResponse, error) {
-
-	var updateSong SongResponse
-
-	query := `UPDATE song SET title = $2, track_number = $3, duration_seconds = $4 WHERE id = $1 RETURNING id, title, track_number, duration_seconds`
-
-	err := dbPool.QueryRow(c, query, id, song.Title, song.TrackNumber, song.DurationSeconds).Scan(&updateSong.ID, &updateSong.Title, &updateSong.TrackNumber, &updateSong.DurationSeconds)
-	if err != nil {
-		return nil, err
-	}
-
-	return &updateSong, nil
-}
-
-func patchSong(c *gin.Context, song PatchSong, id string) (*SongResponse, error) {
-
-	var patchedSong SongResponse
-
-	if song.Title != nil {
-		queryName := `UPDATE song SET title = $2 WHERE id = $1 RETURNING id, title`
-		err := dbPool.QueryRow(c, queryName, id, song.Title).Scan(&patchedSong.ID, &patchedSong.Title)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if song.TrackNumber != nil {
-		queryReleaseYear := `UPDATE song SET track_number = $2 WHERE id = $1 RETURNING id, track_number`
-		err := dbPool.QueryRow(c, queryReleaseYear, id, song.TrackNumber).Scan(&patchedSong.ID, &patchedSong.TrackNumber)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if song.DurationSeconds != nil {
-		queryReleaseYear := `UPDATE song SET duration_seconds = $2 WHERE id = $1 RETURNING id, duration_seconds`
-		err := dbPool.QueryRow(c, queryReleaseYear, id, song.DurationSeconds).Scan(&patchedSong.ID, &patchedSong.DurationSeconds)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &patchedSong, nil
-}
-
-func deleteSong(c *gin.Context, id string) error {
-
-	query := `DELETE FROM song where id = $1`
-
-	_, err := dbPool.Query(c, query, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func main() {
 
 	var err error
@@ -240,13 +118,14 @@ func main() {
 	}
 	defer dbPool.Close()
 
-	// TODO: Add other handlers and repos
-
 	artistRepo := repository.NewArtistRepository(dbPool)
 	artistHandler := handler.NewArtistHandler(artistRepo)
 
 	albumRepo := repository.NewAlbumRepository(dbPool)
 	albumHandler := handler.NewAlbumHandler(albumRepo)
+
+	songRepo := repository.NewSongRepository(dbPool)
+	songHandler := handler.NewSongHandler(songRepo)
 
 	router := gin.Default()
 
@@ -271,123 +150,13 @@ func main() {
 	router.PATCH("/albums/:id", albumHandler.PatchAlbum)
 	router.DELETE("/albums/:id", albumHandler.DeleteAlbum)
 
-	router.GET("/songs", func(c *gin.Context) {
-		songs, err := getSongs(c)
-
-		if err != nil {
-			log.Printf("Error fetching songs: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-			return
-		}
-
-		c.JSON(http.StatusOK, songs)
-	})
-
-	router.POST("/songs", func(c *gin.Context) {
-		var newSong CreateSong
-
-		err := c.BindJSON(&newSong)
-		if err != nil {
-			return
-		}
-
-		songCreated, err := createSong(c, newSong)
-
-		if err != nil {
-			log.Printf("Error creating song %v", err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		newUrl := "Location: /songs/" + strconv.Itoa(songCreated.ID)
-		c.Header("location", newUrl)
-		c.JSON(http.StatusCreated, songCreated)
-	})
-
-	router.GET("/songs/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		song, err := getSong(c, id)
-
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Song not found"})
-				return
-			}
-
-			log.Printf("Error fetching song %s: %v", id, err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		c.JSON(http.StatusOK, song)
-	})
-
-	router.PUT("/songs/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		var newSong UpdateSong
-
-		err := c.BindJSON(&newSong)
-		if err != nil {
-			return
-		}
-
-		updatedSong, err := updateSong(c, newSong, id)
-
-		if err != nil {
-			log.Printf("Error updating song %v", err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		newUrl := "Location: /songs/" + strconv.Itoa(updatedSong.ID)
-		c.Header("location", newUrl)
-		c.JSON(http.StatusCreated, updatedSong)
-	})
-
-	router.PATCH("/songs/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		var newSong PatchSong
-
-		err := c.BindJSON(&newSong)
-		if err != nil {
-			return
-		}
-
-		patchedSong, err := patchSong(c, newSong, id)
-
-		if err != nil {
-			log.Printf("Error patching song %v", err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		newUrl := "Location: /songs/" + strconv.Itoa(patchedSong.ID)
-		c.Header("location", newUrl)
-		c.JSON(http.StatusCreated, patchedSong)
-	})
-
-	router.DELETE("/songs/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		err := deleteSong(c, id)
-
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Song not found"})
-				return
-			}
-
-			log.Printf("Error deleting song %s: %v", id, err)
-
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-			return
-		}
-
-		c.JSON(http.StatusNoContent, "Deleted Song")
-	})
+	router.GET("/songs", songHandler.GetAll)
+	router.GET("/songs/:id", songHandler.GetSong)
+	router.POST("/songs", songHandler.CreateSong)
+	router.PUT("/songs/:id", songHandler.UpdateSong)
+	router.PATCH("/songs/:id", songHandler.PatchSong)
+	router.DELETE("/songs/:id", songHandler.DeleteSong)
 
 	router.Run(":9000")
+
 }
