@@ -3,10 +3,12 @@ package handler
 import (
 	"errors"
 	"log"
-	"music-go/internal/model"
-	"music-go/internal/repository"
 	"net/http"
 	"strconv"
+
+	"github.com/liamcoleman/music-go/internal/repository"
+
+	"github.com/liamcoleman/music-go/internal/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"

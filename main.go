@@ -3,21 +3,20 @@ package main
 import (
 	"context"
 	"log"
-	"music-go/internal/handler"
-	"music-go/internal/repository"
 	"net/http"
 	"os"
+
+	"github.com/liamcoleman/music-go/internal/repository"
+
+	"github.com/liamcoleman/music-go/internal/handler"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var dbPool *pgxpool.Pool
-
 func main() {
 
-	var err error
-	dbPool, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	dbPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal("Unable to create connection pool:", err)
 	}
@@ -61,5 +60,7 @@ func main() {
 	router.PUT("/songs/:id", songHandler.UpdateSong)
 	router.PATCH("/songs/:id", songHandler.PatchSong)
 	router.DELETE("/songs/:id", songHandler.DeleteSong)
+
+	router.Run()
 
 }

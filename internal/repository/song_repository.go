@@ -2,7 +2,8 @@ package repository
 
 import (
 	"context"
-	"music-go/internal/model"
+
+	"github.com/liamcoleman/music-go/internal/model"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

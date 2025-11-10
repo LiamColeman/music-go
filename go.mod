@@ -1,4 +1,4 @@
-module music-go
+module github.com/liamcoleman/music-go
 
 go 1.25.3
 
