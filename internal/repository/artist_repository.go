@@ -43,7 +43,7 @@ func (r *ArtistRepository) GetArtists(ctx context.Context) ([]model.Artist, erro
 	return artists, nil
 }
 
-func (r *ArtistRepository) getArtist(ctx context.Context, id string) (*model.ArtistWithAlbums, error) {
+func (r *ArtistRepository) GetArtist(ctx context.Context, id string) (*model.ArtistWithAlbums, error) {
 	var artist model.ArtistWithAlbums
 	query := `SELECT id, name, description FROM artist WHERE id = $1`
 
@@ -52,7 +52,7 @@ func (r *ArtistRepository) getArtist(ctx context.Context, id string) (*model.Art
 		return nil, err
 	}
 
-	artist.Albums, err = r.getAlbumsForArtist(ctx, artist.ID)
+	artist.Albums, err = r.GetAlbumsForArtist(ctx, artist.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (r *ArtistRepository) getArtist(ctx context.Context, id string) (*model.Art
 
 }
 
-func (r *ArtistRepository) getAlbumsForArtist(ctx context.Context, artistID int) ([]model.Album, error) {
+func (r *ArtistRepository) GetAlbumsForArtist(ctx context.Context, artistID int) ([]model.Album, error) {
 
 	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1 ORDER BY release_year DESC`
 	rows, err := r.dbPool.Query(ctx, query, artistID)
@@ -86,4 +86,66 @@ func (r *ArtistRepository) getAlbumsForArtist(ctx context.Context, artistID int)
 	}
 
 	return albums, nil
+}
+
+func (r *ArtistRepository) CreateArtist(ctx context.Context, artist model.CreateArtist) (*model.Artist, error) {
+
+	var createdArtist model.Artist
+	query := `INSERT INTO artist (name, description) VALUES ($1, $2) RETURNING id, name, description`
+	err := r.dbPool.QueryRow(ctx, query, artist.Name, artist.Description).Scan(&createdArtist.ID, &createdArtist.Name, &createdArtist.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdArtist, nil
+
+}
+
+func (r *ArtistRepository) UpdateArtist(ctx context.Context, artist model.UpdateArtist, id string) (*model.Artist, error) {
+	var updatedArtist model.Artist
+
+	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1 RETURNING id, name, description`
+
+	err := r.dbPool.QueryRow(ctx, query, id, artist.Name, artist.Description).Scan(&updatedArtist.ID, &updatedArtist.Name, &updatedArtist.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatedArtist, nil
+
+}
+
+func (r *ArtistRepository) PatchArtist(ctx context.Context, artist model.PatchArtist, id string) (*model.Artist, error) {
+
+	var patchedArtist model.Artist
+
+	if artist.Name != nil {
+		queryName := `UPDATE artist SET name = $2 WHERE id = $1 RETURN name`
+		err := r.dbPool.QueryRow(ctx, queryName, id, artist.Name).Scan(&patchedArtist.ID, &patchedArtist.Name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if artist.Description != nil {
+		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1`
+		err := r.dbPool.QueryRow(ctx, queryDescription, id, artist.Description).Scan(&patchedArtist.ID, &patchedArtist.Description)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &patchedArtist, nil
+}
+
+func (r *ArtistRepository) DeleteArtist(ctx context.Context, id string) error {
+
+	query := `DELETE FROM artist where id = $1`
+
+	_, err := r.dbPool.Query(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
