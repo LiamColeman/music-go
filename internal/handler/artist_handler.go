@@ -89,6 +89,11 @@ func (h *ArtistHandler) UpdateArtist(c *gin.Context) {
 	updatedArtist, err := h.artistRepo.UpdateArtist(c.Request.Context(), newArtist, id)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Artist not found"})
+			return
+		}
+
 		log.Printf("Error updating artist %v", err)
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -113,6 +118,11 @@ func (h *ArtistHandler) PatchArtist(c *gin.Context) {
 	patchedArtist, err := h.artistRepo.PatchArtist(c.Request.Context(), newArtist, id)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Artist not found"})
+			return
+		}
+
 		log.Printf("Error patching artist %v", err)
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
