@@ -12,7 +12,7 @@ Start docker, then start the server
 Create an artist
 ```
 curl --request POST \
-  --url http://localhost:9000/artists \
+  --url http://localhost:8080/artists \
   --header 'Content-Type: application/json' \
   --data '{
   "name": "Nine Inch Nails",
@@ -23,7 +23,7 @@ curl --request POST \
 Create an album
 ```
 curl --request POST \
-  --url http://localhost:9000/albums \
+  --url http://localhost:8080/albums \
   --header 'Content-Type: application/json' \
   --data '  {
     "artist_id": 5,
@@ -35,7 +35,7 @@ curl --request POST \
 Create a song
 ```
 curl --request POST \
-  --url http://localhost:9000/songs \
+  --url http://localhost:8080/songs \
   --header 'Content-Type: application/json' \
   --data '  {
     "album_id": 9,
@@ -48,7 +48,7 @@ curl --request POST \
 Update a song
 ```
 curl --request PUT \
-  --url http://localhost:9000/songs/9 \
+  --url http://localhost:8080/songs/9 \
   --header 'Content-Type: application/json' \
   --data '  {
     "title": "Somewhat Damaged",
@@ -61,7 +61,7 @@ Delete an Artist
 Note: Deleting an artist will cascade delete the albums and songs for the artist
 ```
 curl --request DELETE \
-  --url http://localhost:9000/artists/5 \
+  --url http://localhost:8080/artists/5 \
   --header 'Content-Type: application/json' \
   --data '  {
     "title": "Somewhat Damaged",
