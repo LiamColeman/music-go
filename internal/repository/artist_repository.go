@@ -157,5 +157,12 @@ func (r *ArtistRepository) DeleteArtist(ctx context.Context, id string) error {
 		return err
 	}
 
+	// query2 := `UPDATE album SET archived = TRUE WHERE artist_id = $1`
+
+	// _, err = r.dbPool.Exec(ctx, query2, id)
+	// if err != nil {
+	// 	return err
+	// }
+
 	return nil
 }
