@@ -128,7 +128,7 @@ func (r *SongRepository) DeleteSong(ctx context.Context, id string) error {
 
 	query := `DELETE FROM song where id = $1`
 
-	_, err := r.dbPool.Query(ctx, query, id)
+	_, err := r.dbPool.Exec(ctx, query, id)
 	if err != nil {
 		return err
 	}

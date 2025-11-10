@@ -142,7 +142,7 @@ func (r *ArtistRepository) DeleteArtist(ctx context.Context, id string) error {
 
 	query := `DELETE FROM artist where id = $1`
 
-	_, err := r.dbPool.Query(ctx, query, id)
+	_, err := r.dbPool.Exec(ctx, query, id)
 	if err != nil {
 		return err
 	}
