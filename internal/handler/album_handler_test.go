@@ -201,4 +201,39 @@ func TestAlbums(t *testing.T) {
 		assert.Contains(t, location, locationUrl)
 	})
 
+	t.Run("DeleteAlbum", func(t *testing.T) {
+
+		// Create HTTP request
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		var deleteArtistUrl = "/albums/" + strconv.Itoa(createdAlbum.ID)
+		c.Request = httptest.NewRequest("DELETE", deleteArtistUrl, nil)
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(createdAlbum.ID)}}
+
+		// Call handler
+		handler.DeleteAlbum(c)
+
+		// Assertions
+		assert.Equal(t, http.StatusNoContent, w.Code)
+
+		w = httptest.NewRecorder()
+		c, _ = gin.CreateTestContext(w)
+
+		// Verify the delete happened by doing a get request
+		var getArtistUrl = "/artists/" + strconv.Itoa(createdAlbum.ID)
+		c.Request = httptest.NewRequest("GET", getArtistUrl, nil)
+
+		// Set the URL parameter that the handler expects
+		c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(createdAlbum.ID)}}
+
+		// Call handler
+		handler.GetAlbum(c)
+
+		// Assertions
+		assert.Equal(t, http.StatusNotFound, w.Code)
+
+	})
+
 }
