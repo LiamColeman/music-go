@@ -28,7 +28,7 @@ func (h *AlbumHandler) GetAll(c *gin.Context) {
 	albums, err := h.albumRepo.GetAlbums(c.Request.Context())
 
 	if err != nil {
-		log.Printf("Error fetching artists: %v", err)
+		log.Printf("Error fetching albums: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
 		return
 	}
@@ -100,7 +100,7 @@ func (h *AlbumHandler) UpdateAlbum(c *gin.Context) {
 		return
 	}
 
-	newUrl := "Location: /artists/" + strconv.Itoa(updatedAlbum.ID)
+	newUrl := "Location: /albums/" + strconv.Itoa(updatedAlbum.ID)
 	c.Header("location", newUrl)
 	c.JSON(http.StatusOK, updatedAlbum)
 }
@@ -128,7 +128,7 @@ func (h *AlbumHandler) PatchAlbum(c *gin.Context) {
 		return
 	}
 
-	newUrl := "Location: /artists/" + strconv.Itoa(patchedAlbum.ID)
+	newUrl := "Location: /albums/" + strconv.Itoa(patchedAlbum.ID)
 	c.Header("location", newUrl)
 	c.JSON(http.StatusOK, patchedAlbum)
 }
@@ -149,5 +149,5 @@ func (h *AlbumHandler) DeleteAlbum(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusNoContent, nil)
 }
