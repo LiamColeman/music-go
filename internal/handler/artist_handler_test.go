@@ -57,7 +57,6 @@ func TestArtists(t *testing.T) {
 	// Store this so we can use in tests
 	var createdArtist model.Artist
 
-	// Test 1: Create an artist
 	t.Run("CreateArtist", func(t *testing.T) {
 		// Create request body
 		createArtist := model.CreateArtist{
@@ -91,7 +90,6 @@ func TestArtists(t *testing.T) {
 		assert.Contains(t, location, locationUrl)
 	})
 
-	// Test 2: Get artist (should only include the one we just created)
 	t.Run("GetArtist", func(t *testing.T) {
 		// Create HTTP request
 		w := httptest.NewRecorder()
@@ -116,7 +114,6 @@ func TestArtists(t *testing.T) {
 		assert.Equal(t, createdArtist.ID, artist.ID)
 	})
 
-	// Test 3: Get all artists (should include the one we just created)
 	t.Run("GetAllArtists", func(t *testing.T) {
 		// Create HTTP request
 		w := httptest.NewRecorder()
@@ -233,7 +230,6 @@ func TestArtists(t *testing.T) {
 		locationUrl := "/artists/" + strconv.Itoa(updatedArtist.ID)
 		assert.Contains(t, location, locationUrl)
 
-
 		w = httptest.NewRecorder()
 		c, _ = gin.CreateTestContext(w)
 
@@ -279,7 +275,7 @@ func TestArtists(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		var updateArtistUrl = "/artists/" + strconv.Itoa(createdArtist.ID)
-		c.Request = httptest.NewRequest("PUT", updateArtistUrl, bytes.NewBuffer(body))
+		c.Request = httptest.NewRequest("PATCH", updateArtistUrl, bytes.NewBuffer(body))
 		c.Request.Header.Set("Content-Type", "application/json")
 
 		c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(createdArtist.ID)}}
@@ -300,7 +296,6 @@ func TestArtists(t *testing.T) {
 		location := w.Header().Get("Location")
 		locationUrl := "/artists/" + strconv.Itoa(patchedArtist.ID)
 		assert.Contains(t, location, locationUrl)
-
 
 		w = httptest.NewRecorder()
 		c, _ = gin.CreateTestContext(w)
@@ -324,6 +319,41 @@ func TestArtists(t *testing.T) {
 		assert.Equal(t, patchedArtistName, artist.Name)
 		assert.Equal(t, patchedArtistDescription, artist.Description)
 		assert.Equal(t, patchedArtist.ID, artist.ID)
+
+	})
+
+	t.Run("DeleteArtist", func(t *testing.T) {
+
+		// Create HTTP request
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		var deleteArtistUrl = "/artists/" + strconv.Itoa(createdArtist.ID)
+		c.Request = httptest.NewRequest("DELETE", deleteArtistUrl, nil)
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(createdArtist.ID)}}
+
+		// Call handler
+		handler.DeleteArtist(c)
+
+		// Assertions
+		assert.Equal(t, http.StatusNoContent, w.Code)
+
+		w = httptest.NewRecorder()
+		c, _ = gin.CreateTestContext(w)
+
+		// Verify the delete happened by doing a get request
+		var getArtistUrl = "/artists/" + strconv.Itoa(createdArtist.ID)
+		c.Request = httptest.NewRequest("GET", getArtistUrl, nil)
+
+		// Set the URL parameter that the handler expects
+		c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(createdArtist.ID)}}
+
+		// Call handler
+		handler.GetArtist(c)
+
+		// Assertions
+		assert.Equal(t, http.StatusNotFound, w.Code)
 
 	})
 }
