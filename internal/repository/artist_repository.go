@@ -19,7 +19,7 @@ func NewArtistRepository(dbPool *pgxpool.Pool) *ArtistRepository {
 }
 
 func (r *ArtistRepository) GetArtists(ctx context.Context) ([]model.Artist, error) {
-	query := `SELECT id, name, description FROM artist`
+	query := `SELECT id, name, description FROM artist WHERE archived = FALSE`
 	rows, err := r.dbPool.Query(ctx, query)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (r *ArtistRepository) GetArtists(ctx context.Context) ([]model.Artist, erro
 
 func (r *ArtistRepository) GetArtist(ctx context.Context, id string) (*model.ArtistWithAlbums, error) {
 	var artist model.ArtistWithAlbums
-	query := `SELECT id, name, description FROM artist WHERE id = $1`
+	query := `SELECT id, name, description FROM artist WHERE id = $1 AND archived = FALSE`
 
 	err := r.dbPool.QueryRow(ctx, query, id).Scan(&artist.ID, &artist.Name, &artist.Description)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r *ArtistRepository) GetArtist(ctx context.Context, id string) (*model.Art
 
 func (r *ArtistRepository) GetAlbumsForArtist(ctx context.Context, artistID int) ([]model.Album, error) {
 
-	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1 ORDER BY release_year DESC`
+	query := `SELECT id, name, release_year FROM album WHERE artist_id = $1 AND archived = FALSE ORDER BY release_year DESC`
 	rows, err := r.dbPool.Query(ctx, query, artistID)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (r *ArtistRepository) GetAlbumsForArtist(ctx context.Context, artistID int)
 func (r *ArtistRepository) CreateArtist(ctx context.Context, artist model.CreateArtist) (*model.Artist, error) {
 
 	var createdArtist model.Artist
-	query := `INSERT INTO artist (name, description) VALUES ($1, $2) RETURNING id, name, description`
+	query := `INSERT INTO artist (name, description, archived) VALUES ($1, $2, FALSE) RETURNING id, name, description`
 	err := r.dbPool.QueryRow(ctx, query, artist.Name, artist.Description).Scan(&createdArtist.ID, &createdArtist.Name, &createdArtist.Description)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (r *ArtistRepository) CreateArtist(ctx context.Context, artist model.Create
 func (r *ArtistRepository) UpdateArtist(ctx context.Context, artist model.UpdateArtist, id string) (*model.Artist, error) {
 	var updatedArtist model.Artist
 
-	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1 RETURNING id, name, description`
+	query := `UPDATE artist SET name = $2, description = $3 WHERE id = $1 AND archived = FALSE RETURNING id, name, description`
 
 	err := r.dbPool.QueryRow(ctx, query, id, artist.Name, artist.Description).Scan(&updatedArtist.ID, &updatedArtist.Name, &updatedArtist.Description)
 	if err != nil {
@@ -121,7 +121,7 @@ func (r *ArtistRepository) PatchArtist(ctx context.Context, artist model.PatchAr
 	var patchedArtist model.Artist
 
 	if artist.Name != nil {
-		queryName := `UPDATE artist SET name = $2 WHERE id = $1`
+		queryName := `UPDATE artist SET name = $2 WHERE id = $1 AND archived = FALSE`
 		_, err := r.dbPool.Exec(ctx, queryName, id, artist.Name)
 		if err != nil {
 			return nil, err
@@ -129,14 +129,14 @@ func (r *ArtistRepository) PatchArtist(ctx context.Context, artist model.PatchAr
 	}
 
 	if artist.Description != nil {
-		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1`
+		queryDescription := `UPDATE artist SET description = $2 WHERE id = $1 AND archived = FALSE`
 		_, err := r.dbPool.Exec(ctx, queryDescription, id, artist.Description)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	query := `SELECT id, name, description FROM artist WHERE id = $1`
+	query := `SELECT id, name, description FROM artist WHERE id = $1 AND archived = FALSE`
 
 	err := r.dbPool.QueryRow(ctx, query, id).Scan(&patchedArtist.ID, &patchedArtist.Name, &patchedArtist.Description)
 	if err != nil {
@@ -148,9 +148,25 @@ func (r *ArtistRepository) PatchArtist(ctx context.Context, artist model.PatchAr
 
 func (r *ArtistRepository) DeleteArtist(ctx context.Context, id string) error {
 
-	query := `DELETE FROM artist where id = $1`
+	// TODO: Cascade and set albums / songs as well
+	// query := `DELETE FROM artist where id = $1`
+	query := `UPDATE artist SET archived = TRUE WHERE id = $1`
 
 	_, err := r.dbPool.Exec(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	query2 := `UPDATE album SET archived = TRUE WHERE artist_id = $1`
+
+	_, err = r.dbPool.Exec(ctx, query2, id)
+	if err != nil {
+		return err
+	}
+
+	query3 := `UPDATE song SET archived = TRUE FROM album WHERE song.album_id = album.id AND album.id = $1`
+
+	_, err = r.dbPool.Exec(ctx, query3, id)
 	if err != nil {
 		return err
 	}

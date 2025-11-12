@@ -89,6 +89,11 @@ func (h *SongHandler) UpdateSong(c *gin.Context) {
 	updatedSong, err := h.songRepo.UpdateSong(c.Request.Context(), newSong, id)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Song not found"})
+			return
+		}
+
 		log.Printf("Error updating song %v", err)
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -112,6 +117,11 @@ func (h *SongHandler) PatchSong(c *gin.Context) {
 	patchedSong, err := h.songRepo.PatchSong(c.Request.Context(), newSong, id)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Song not found"})
+			return
+		}
+
 		log.Printf("Error patching song %v", err)
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
