@@ -115,4 +115,47 @@ func TestAlbums(t *testing.T) {
 		assert.Equal(t, createdAlbum.ID, album.ID)
 	})
 
+	t.Run("UpdateAlbum", func(t *testing.T) {
+
+		updatedAlbumName := "Update album for Integration"
+		updatedAlbumReleaseYear := 2018
+
+		// Store this so we can use in tests
+		var updatedAlbum model.Album
+
+		// Create request body
+		updateAlbum := model.UpdateAlbum{
+			Name:        updatedAlbumName,
+			ReleaseYear: updatedAlbumReleaseYear,
+		}
+
+		body, _ := json.Marshal(updateAlbum)
+
+		// Create HTTP request
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		var updateAlbumUrl = "/albums/" + strconv.Itoa(createdAlbum.ID)
+		c.Request = httptest.NewRequest("PUT", updateAlbumUrl, bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(createdAlbum.ID)}}
+
+		// Call handler
+		handler.UpdateAlbum(c)
+
+		// Assertions
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		err := json.Unmarshal(w.Body.Bytes(), &updatedAlbum)
+		assert.NoError(t, err)
+		assert.Equal(t, updatedAlbumName, updatedAlbum.Name)
+		assert.Equal(t, updatedAlbumReleaseYear, updatedAlbum.ReleaseYear)
+		assert.NotZero(t, updatedAlbum.ID)
+
+		// Check Location header
+		location := w.Header().Get("Location")
+		locationUrl := "/albums/" + strconv.Itoa(updatedAlbum.ID)
+		assert.Contains(t, location, locationUrl)
+	})
+
 }
