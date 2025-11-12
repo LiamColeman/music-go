@@ -144,50 +144,6 @@ func TestArtists(t *testing.T) {
 		assert.True(t, found, testArtistDescription)
 	})
 
-	// Test 1: Create an artist
-	t.Run("UpdateArtist", func(t *testing.T) {
-
-		updatedArtistName := "Update Artist for Integration"
-		updatedArtistDescription := "An updated test artist for integration testing"
-
-		// Store this so we can use in tests
-		var updatedArtist model.Artist
-
-		// Create request body
-		updateArtist := model.UpdateArtist{
-			Name:        updatedArtistName,
-			Description: updatedArtistDescription,
-		}
-
-		body, _ := json.Marshal(updateArtist)
-
-		// Create HTTP request
-		w := httptest.NewRecorder()
-		c, _ := gin.CreateTestContext(w)
-		var updateArtistUrl = "/artists/" + strconv.Itoa(createdArtist.ID)
-		c.Request = httptest.NewRequest("PUT", updateArtistUrl, bytes.NewBuffer(body))
-		c.Request.Header.Set("Content-Type", "application/json")
-
-		c.Params = gin.Params{{Key: "id", Value: strconv.Itoa(createdArtist.ID)}}
-
-		// Call handler
-		handler.UpdateArtist(c)
-
-		// Assertions
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		err := json.Unmarshal(w.Body.Bytes(), &updatedArtist)
-		assert.NoError(t, err)
-		assert.Equal(t, updatedArtistName, updatedArtist.Name)
-		assert.Equal(t, updatedArtistDescription, updatedArtist.Description)
-		assert.NotZero(t, updatedArtist.ID)
-
-		// Check Location header
-		location := w.Header().Get("Location")
-		locationUrl := "/artists/" + strconv.Itoa(updatedArtist.ID)
-		assert.Contains(t, location, locationUrl)
-	})
-
 	t.Run("UpdateArtist", func(t *testing.T) {
 
 		updatedArtistName := "Update Artist for Integration"
