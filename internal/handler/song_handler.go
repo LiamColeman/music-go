@@ -102,7 +102,7 @@ func (h *SongHandler) UpdateSong(c *gin.Context) {
 
 	newUrl := "Location: /songs/" + strconv.Itoa(updatedSong.ID)
 	c.Header("location", newUrl)
-	c.JSON(http.StatusCreated, updatedSong)
+	c.JSON(http.StatusOK, updatedSong)
 }
 
 func (h *SongHandler) PatchSong(c *gin.Context) {
@@ -130,7 +130,7 @@ func (h *SongHandler) PatchSong(c *gin.Context) {
 
 	newUrl := "Location: /songs/" + strconv.Itoa(patchedSong.ID)
 	c.Header("location", newUrl)
-	c.JSON(http.StatusCreated, patchedSong)
+	c.JSON(http.StatusOK, patchedSong)
 }
 
 func (h *SongHandler) DeleteSong(c *gin.Context) {

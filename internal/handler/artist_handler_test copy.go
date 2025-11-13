@@ -16,9 +16,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// setupTestDB creates a connection pool to your test database
+// setupTestDBArtist creates a connection pool to your test database
 // NOTE: Start test database with: docker compose -f docker-compose.test.yml up -d
-func setupTestDB(t *testing.T) *pgxpool.Pool {
+func setupTestDBArtist(t *testing.T) *pgxpool.Pool {
 	// Use test database URL (separate DB on port 5433)
 	databaseURL := "postgresql://postgres:gizzard@localhost:5433/albums_test"
 
@@ -41,7 +41,7 @@ func cleanupArtists(t *testing.T, pool *pgxpool.Pool, name string) {
 
 func TestArtists(t *testing.T) {
 	// Setup
-	pool := setupTestDB(t)
+	pool := setupTestDBArtist(t)
 	defer pool.Close()
 
 	artistRepo := repository.NewArtistRepository(pool)
