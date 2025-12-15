@@ -1,0 +1,19 @@
+services:
+  test-db:
+    image: postgres:17
+    container_name: music_postgres_test
+    environment:
+      POSTGRES_HOST: test-db
+      POSTGRES_PORT: 5433
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: gizzard
+      POSTGRES_DB: albums_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./music_db.dump:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 1s
+      timeout: 5s
+      retries: 10

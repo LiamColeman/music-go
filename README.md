@@ -17,6 +17,24 @@ Start Air
 
     Air
 
+## Testing
+
+Start the test database (separate from dev database on port 5433)
+
+    docker compose -f docker-compose.test.yml up -d
+
+Run tests
+
+    go test -v ./internal/handler
+
+Run tests with coverage
+
+    go test -v -cover ./internal/handler
+
+Stop test database
+
+    docker compose -f docker-compose.test.yml down
+
 
 
 ## Examples
